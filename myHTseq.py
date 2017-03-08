@@ -1,6 +1,7 @@
 import sys
 import pysam
 import re
+import operator
 from collections import defaultdict
 
 def parseGTFFile (filename):
@@ -22,24 +23,90 @@ def parseGTFFile (filename):
 		gene_id = re.search(r'gene_id \"(.+?)\";', id_string).group(1)
 	
 		if feature == 'gene':
-			parsedData[gene_id] = {
-					'chrom':chrom,
+			parsedData[chrom] = {
+					'+':list(),
+					'-':list()
+					}
+			parsedData[chrom][strand].append({
+					'gene_id':gene_id,
 					'start':start,
 					'end':end,
-					'strand':strand,
 					'exons':list(),
 					'intronic':list(),
 					'reads':list()
-					}
+				})
+
 		elif feature == 'exon':
-			parsedData[gene_id]['exons'].append({
+			element_index = len(parsedData[chrom][strand]) - 1
+			parsedData[chrom][strand][element_index]['exons'].append({
 					'start':start,
 					'end':end
 					})
 		
 	
 	gtf_fp.close()
+
+	# guarantee sorted GTF data
+	for chrom in parsedData:
+		for strand in parsedData[chrom]:
+			parsedData[chrom][strand].sort(key=operator.itemgetter('start', 'end')) 
+			for i in range(len(parsedData[chrom][strand])):
+				parsedData[chrom][strand][i]['exons'].sort(key=operator.itemgetter('start', 'end'))
+
 	return parsedData
+
+def overlap(block1, block2):
+	if ( block1['start'] < block2['end'] and 
+			block1['end'] > block2['start']
+			):
+		return True
+
+	return False
+
+def rangeBsearch(queryStart, queryEnd, data):
+	upper_bound = rangeBsearchUpper(queryStart, queryEnd, data)
+	lower_bound = rangeBsearchLower(queryStart, queryEnd, data)
+
+	if (lower_bound >= len(data) or
+			not overlap(data[lower_bound], {
+				'start':queryStart,
+				'end':queryEnd
+				})
+			):
+		return []
+
+	return data[lower_bound:upper_bound]
+
+
+def rangeBsearchUpper(queryStart, queryEnd, data):
+	upper = len(data) - 1
+	lower = 0
+
+	while lower <= upper:
+		mid = (lower + upper) // 2
+
+		if data[mid]['start'] > queryEnd:
+			upper = mid - 1
+		else:
+			lower = mid + 1
+	
+	return lower
+
+def rangeBsearchLower(queryStart, queryEnd, data):
+	upper = len(data) - 1
+	lower = 0
+
+	while lower <= upper:
+		mid = (lower + upper) // 2
+
+		if data[mid]['end'] < queryStart:
+			lower = mid + 1
+		else:
+			upper = mid - 1
+	
+	return lower
+
+
 
 ## END FUNCTIONS ##
 
@@ -54,12 +121,16 @@ print ("DEBUG: opening GTF file", file=sys.stderr)
 gene_elements = parseGTFFile(gtffile)
 print("DEBUG: done with GTF file", file=sys.stderr)
 
+
+
+"""
 bam_fp = pysam.AlignmentFile(bamfile, "rb")
 
 print("DEBUG: checking BAM index", file=sys.stderr)
 if not bam_fp.check_index():
 	print("ERROR: no index!", file=sys.stderr)
 	sys.exit(1)
+
 
 print("DEBUG: starting to iterate over genes", file=sys.stderr)
 for gene in gene_elements:
@@ -159,3 +230,20 @@ bam_fp.close()
 #		(not read_flag & 0x1)       # unpaired
 #	): 
 #		continue
+	
+		if feature == 'gene':
+			parsedData[gene_id] = {
+					'chrom':chrom,
+					'start':start,
+					'end':end,
+					'strand':strand,
+					'exons':list(),
+					'intronic':list(),
+					'reads':list()
+					}
+		elif feature == 'exon':
+			parsedData[gene_id]['exons'].append({
+					'start':start,
+					'end':end
+					})
+"""
