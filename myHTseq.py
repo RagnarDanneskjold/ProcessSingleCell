@@ -3,6 +3,46 @@ import pysam
 import re
 from collections import defaultdict
 
+def parseGTFFile (filename):
+	gtf_fp = open(filename, "r")
+	parsedData = dict()
+
+	for line in gtf_fp:
+		if line.startswith('#'):
+			continue
+	
+		line_ar = line.rstrip('\n\r').split('\t')
+		chrom = line_ar[0]
+		feature = line_ar[2]
+		start = int(line_ar[3])
+		end = int(line_ar[4])
+		strand = line_ar[6]
+	
+		id_string = line_ar[8]
+		gene_id = re.search(r'gene_id \"(.+?)\";', id_string).group(1)
+	
+		if feature == 'gene':
+			parsedData[gene_id] = {
+					'chrom':chrom,
+					'start':start,
+					'end':end,
+					'strand':strand,
+					'exons':list(),
+					'intronic':list(),
+					'reads':list()
+					}
+		elif feature == 'exon':
+			parsedData[gene_id]['exons'].append({
+					'start':start,
+					'end':end
+					})
+		
+	
+	gtf_fp.close()
+	return parsedData
+
+## END FUNCTIONS ##
+
 if (len(sys.argv) < 2):
 	print("usage:", sys.argv[0], "<name-sorted bamfile> <GENCODE gtf file>")
 	sys.exit(1)
@@ -10,46 +50,8 @@ if (len(sys.argv) < 2):
 bamfile = sys.argv[1]
 gtffile = sys.argv[2]
 
-# process gtf file first
-gtf_fp = open(gtffile, "r")
-
-gene_elements = defaultdict()
-
 print ("DEBUG: opening GTF file", file=sys.stderr)
-
-for line in gtf_fp:
-	if line.startswith('#'):
-		continue
-
-	line_ar = line.rstrip('\n\r').split('\t')
-	chrom = line_ar[0]
-	feature = line_ar[2]
-	start = int(line_ar[3])
-	end = int(line_ar[4])
-	strand = line_ar[6]
-
-	id_string = line_ar[8]
-	gene_id = re.search(r'gene_id \"(.+?)\";', id_string).group(1)
-
-	if feature == 'gene':
-		gene_elements[gene_id] = {
-				'chrom':chrom,
-				'start':start,
-				'end':end,
-				'strand':strand,
-				'exons':list(),
-				'intronic':list(),
-				'reads':list()
-				}
-	elif feature == 'exon':
-		gene_elements[gene_id]['exons'].append({
-				'start':start,
-				'end':end
-				})
-	
-
-gtf_fp.close()
-
+gene_elements = parseGTFFile(gtffile)
 print("DEBUG: done with GTF file", file=sys.stderr)
 
 bam_fp = pysam.AlignmentFile(bamfile, "rb")
@@ -62,7 +64,6 @@ if not bam_fp.check_index():
 print("DEBUG: starting to iterate over genes", file=sys.stderr)
 for gene in gene_elements:
 	print("DEBUG: gene is", gene, file=sys.stderr)
-	#overlap_reads = list()
 	overlap_reads = dict()
 
 	for read in bam_fp.fetch(gene_elements[gene]['chrom'], gene_elements[gene]['start'], gene_elements[gene]['end']):
@@ -73,13 +74,8 @@ for gene in gene_elements:
 			read.mate_is_unmapped or  
 			not read.is_paired or 
 			not read.is_proper_pair ):
-
-#			print("ERROR: read fails. Continuing!", file=sys.stderr)
 			continue
 
-		
-#		print("DEBUG: appending read", file=sys.stderr)
-#		overlap_reads.append(read)
 		if read.query_name not in overlap_reads:
 			overlap_reads[read.query_name] = list()
 
@@ -111,11 +107,32 @@ for gene in gene_elements:
 					mate_read.mate_is_unmapped or  
 					not mate_read.is_paired or 
 					not mate_read.is_proper_pair ):
-					print("\t\t\tmate fails QC")
+					print("\t\t\tmate fails QC:")
+
+					if mate_read.is_secondary:
+						print("\t\t\t\tis_secondary")
+					elif mate_read.is_duplicate:
+						print("\t\t\t\tis_duplicate")
+					elif mate_read.is_qcfail:
+						print("\t\t\t\tis_qcfail")
+					elif mate_read.is_unmapped:
+						print("\t\t\t\tis_unmapped")
+					elif mate_read.mate_is_unmapped:
+						print("\t\t\t\tmate_is_unmapped")
+					elif not mate_read.is_paired:
+						print("\t\t\t\tNOT is_paired")
+					elif not mate_read.is_proper_paired:
+						print("\t\t\t\tNOT is_proper_paired")
+					else:
+						print("\t\t\t\tSomething else?")
+
 				else:
 					print("\t\t\tmate passes QC")
-					print("\t\t\taligned to:", mate_read.get_reference_positions())
+					print("\t\t\tread aligned to:", read.get_reference_positions())
+					print("\t\t\tmate aligned to:", mate_read.get_reference_positions())
 					print("\t\t\tgene positions: chr", gene_elements[gene]['chrom'], "start", gene_elements[gene]['start'], "end", gene_elements[gene]['end'])
+					print("\t\t\tread overlap is:", read.get_overlap(gene_elements[gene]['start'], gene_elements[gene]['end']))
+					print("\t\t\tmate overlap is:", mate_read.get_overlap(gene_elements[gene]['start'], gene_elements[gene]['end']))
 					
 
 
