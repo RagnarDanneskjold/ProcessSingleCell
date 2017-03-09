@@ -70,6 +70,21 @@ def overlap(block1, block2):
 
 	return False
 
+def overlapBases(block1, block2):
+	if not overlap(block1, block2):
+		return 0
+
+	if block1['start'] < block2['start']:
+		if block1['end'] < block2['end']:
+			return block1['end'] - block2['start']
+		else:
+			return block2['end'] - block2['start']
+	else:
+		if block1['end'] < block2['end']:
+			return block1['end'] - block1['start']
+		else:
+			return block2['end'] - block1['start']
+
 def rangeBsearch(queryStart, queryEnd, data):
 	upper_bound = rangeBsearchUpper(queryStart, queryEnd, data)
 	lower_bound = rangeBsearchLower(queryStart, queryEnd, data)
@@ -82,7 +97,8 @@ def rangeBsearch(queryStart, queryEnd, data):
 			):
 		return []
 
-	return data[lower_bound:upper_bound]
+	return [lower_bound, upper_bound]
+#	return data[lower_bound:upper_bound]
 
 
 def rangeBsearchUpper(queryStart, queryEnd, data):
@@ -140,11 +156,6 @@ def checkBam(filename):
 	return True
 
 def parseFragment(readPair):
-#	read1Start = 0
-#	read1End = 0
-#	read2Start = 0
-#	read2End = 0
-
 	fragment = {
 			'strand':'',
 			'start':0,
@@ -164,12 +175,6 @@ def parseFragment(readPair):
 			fragment['start'] = readPair[1].reference_start
 			fragment['end'] = readPair[0].reference_end
 			fragment['strand'] = '-'
-
-#		print("read1 reverse?:", readPair[0].is_reverse, file=sys.stderr)
-#		read1Start = readPair[0].reference_start
-#		read1End = readPair[0].reference_end
-#		read2Start = readPair[1].reference_start
-#		read2End = readPair[1].reference_end
 	elif readPair[1].is_read1:
 		if not readPair[1].is_reverse:
 			fragment['start'] = readPair[1].reference_start
@@ -180,50 +185,6 @@ def parseFragment(readPair):
 			fragment['end'] = readPair[1].reference_end
 			fragment['strand'] = '-'
 	return fragment
-#		print("read1 reverse?:", readPair[1].is_reverse, file=sys.stderr)
-#		read1Start = readPair[1].reference_start
-#		read1End = readPair[1].reference_end
-#		read2Start = readPair[0].reference_start
-#		read2End = readPair[0].reference_end
-#
-#	if read1Start < read2Start:
-#		print("read1 < read2", file=sys.stderr)
-#		# sense strand
-#		fragment['strand'] = '+'
-#		fragment['start'] = read1Start
-#		fragment['end'] = read2End
-#		
-#	elif read2Start < read1Start:
-#		print("read1 > read2", file=sys.stderr)
-#		# antisense strand
-#		fragment['strand'] = '-'
-#		fragment['start'] = read2Start
-#		fragment['end'] = read1End
-#	else:
-#		#print("ERROR somehow read pairs are equal??",file=sys.stderr)
-#		print("ERROR EQUAL READ PAIRS")
-#
-#		print("[0]")
-#		print("Read 1?:", readPair[0].is_read1)
-#		print("Read 2?:", readPair[0].is_read2)
-#		print("is_reverse?:", readPair[0].is_reverse)
-#		print("reference_start", readPair[0].reference_start)
-#		print("reference_end", readPair[0].reference_end)
-#		print("[1]")
-#		print("Read 1?:", readPair[1].is_read1)
-#		print("Read 2?:", readPair[1].is_read2)
-#		print("is_reverse?:", readPair[1].is_reverse)
-#		print("reference_start", readPair[1].reference_start)
-#		print("reference_end", readPair[1].reference_end)
-#
-#		print(readPair[0])
-#		print(readPair[1])
-#		print(readPair[0].get_reference_positions())
-#		print(readPair[1].get_reference_positions())
-#		#sys.exit(1)
-#		return {}
-#	
-#	return fragment
 
 
 ## END FUNCTIONS ##
@@ -272,9 +233,11 @@ for bam in bamfiles:
 		if read.query_name == prev_read_name:
 			prev_reads.append(read)
 		else:
-			if len(prev_reads) > 0:
+			if (len(prev_reads) > 0 and
+					"chr" + str(prev_reads[0].reference_id) in gene_elements
+					):
 				# handle last pair
-
+				# FIXME find a way to handle the last pair in the entire bam file
 				# debug:
 				if len(prev_reads) != 2:
 					print ("ERROR! len(prev_reads) is",len(prev_reads), file=sys.stderr)
@@ -292,8 +255,48 @@ for bam in bamfiles:
 					prev_read_name = read.query_name
 					prev_reads = [read]
 					continue
-					
+			#parsedData[chrom][strand].append({
+			#		'gene_id':gene_id,
+			#		'start':start,
+			#		'end':end,
+			#		'exons':list(),
+			#		'intronic':list(),
+			#		'reads':list()
+			#	})
+				curr_chrom = prev_reads[0].reference_id
+				curr_chrom = "chr" + str(curr_chrom)
+				#print(curr_chrom, file=sys.stderr)
 
+				overlap_indicies = rangeBsearch(frag['start'], frag['end'], 
+						gene_elements[curr_chrom][frag['strand']])
+				if overlap_indicies == []:
+					prev_read_name = read.query_name
+					prev_reads = [read]
+					continue
+
+
+				if overlap_indicies[0] - overlap_indicies[1] > 1:
+					# this read overlaps multiple elements
+					highest_overlap_index = []
+					curr_highest = 0
+
+					for i in range(overlap_indicies[0], overlap_indicies[1]):
+						score = overlapBases(gene_elements[curr_chrom][frag['strand']][i],frag)
+						if score >= curr_highest:
+							highest_overlap_index.append(i)
+							curr_highest = score
+
+					if len(highest_overlap_index) > 1:
+						# multiple with equal overlap
+						# cannot assign?
+						pass # FIXME temporary
+					elif len(highest_overlap_index) == 1:
+						gene_elements[curr_chrom][frag['strand']][highest_overlap_index[0]]['reads'].append(frag)
+					# else overlap for all was 0, continue
+				else: # 1 element
+					gene_elements[curr_chrom][frag['strand']][overlap_indicies[0]]['reads'].append(frag)
+
+# FIXME handle exons/introns later
 			# replace with this read
 			prev_read_name = read.query_name
 			prev_reads = [read]
@@ -302,6 +305,7 @@ for bam in bamfiles:
 
 
 	bam_fp.close()
+
 
 """
 bam_fp = pysam.AlignmentFile(bamfile, "rb")
