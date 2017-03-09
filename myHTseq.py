@@ -30,10 +30,11 @@ def parseGTFFile (filename):
 		gene_id = re.search(r'gene_id \"(.+?)\";', id_string).group(1)
 	
 		if feature == 'gene':
-			parsedData[chrom] = {
-					'+':list(),
-					'-':list()
-					}
+			if chrom not in parsedData:
+				parsedData[chrom] = {
+						'+':list(),
+						'-':list()
+						}
 			parsedData[chrom][strand].append({
 					'gene_id':gene_id,
 					'start':start,
@@ -59,6 +60,11 @@ def parseGTFFile (filename):
 			parsedData[chrom][strand].sort(key=operator.itemgetter('start', 'end')) 
 			for i in range(len(parsedData[chrom][strand])):
 				parsedData[chrom][strand][i]['exons'].sort(key=operator.itemgetter('start', 'end'))
+
+	# DEBUG
+#	for chrom in parsedData:
+#		for strand in parsedData[chrom]:
+#			print("DEBUG: chrom:", chrom, "strand:", strand, "#genes:", len(parsedData[chrom][strand]), file=sys.stderr)
 
 	return parsedData
 
