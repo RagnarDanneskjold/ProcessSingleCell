@@ -4,6 +4,13 @@ import re
 import operator
 from collections import defaultdict
 
+## CONSTANTS ##
+
+LINES_TO_CHECK = 20
+UNSORTED_PERC = 0.5
+
+## FUNCTIONS ##
+
 def parseGTFFile (filename):
 	gtf_fp = open(filename, "r")
 	parsedData = dict()
@@ -106,6 +113,117 @@ def rangeBsearchLower(queryStart, queryEnd, data):
 	
 	return lower
 
+def checkBam(filename):
+	test_fp = pysam.AlignmentFile(filename, "rb")
+
+	pair_count = 0
+	prev_name = ""
+	unsorted_limit = int(UNSORTED_PERC * LINES_TO_CHECK)
+	unsort_count = 0
+
+	for algn in test_fp.head(LINES_TO_CHECK):
+		curr_name = algn.query_name
+
+		if curr_name == prev_name:
+			pair_count += 1
+		elif prev_name != "" and pair_count != 2:
+			unsort_count += 1
+		
+		if unsort_count >= unsorted_limit:
+			test_fp.close()
+			return False
+
+		prev_name = curr_name
+
+	test_fp.close()
+
+	return True
+
+def parseFragment(readPair):
+#	read1Start = 0
+#	read1End = 0
+#	read2Start = 0
+#	read2End = 0
+
+	fragment = {
+			'strand':'',
+			'start':0,
+			'end':0
+			}
+
+	if readPair[0].is_reverse == readPair[1].is_reverse:
+		print("ERROR READS ARE SAME DIRECTION",file=sys.stderr)
+		return {}
+
+	if readPair[0].is_read1:
+		if not readPair[0].is_reverse:
+			fragment['start'] = readPair[0].reference_start
+			fragment['end'] = readPair[1].reference_end
+			fragment['strand'] = '+'
+		else:
+			fragment['start'] = readPair[1].reference_start
+			fragment['end'] = readPair[0].reference_end
+			fragment['strand'] = '-'
+
+#		print("read1 reverse?:", readPair[0].is_reverse, file=sys.stderr)
+#		read1Start = readPair[0].reference_start
+#		read1End = readPair[0].reference_end
+#		read2Start = readPair[1].reference_start
+#		read2End = readPair[1].reference_end
+	elif readPair[1].is_read1:
+		if not readPair[1].is_reverse:
+			fragment['start'] = readPair[1].reference_start
+			fragment['end'] = readPair[0].reference_end
+			fragment['strand'] = '+'
+		else:
+			fragment['start'] = readPair[0].reference_start
+			fragment['end'] = readPair[1].reference_end
+			fragment['strand'] = '-'
+	return fragment
+#		print("read1 reverse?:", readPair[1].is_reverse, file=sys.stderr)
+#		read1Start = readPair[1].reference_start
+#		read1End = readPair[1].reference_end
+#		read2Start = readPair[0].reference_start
+#		read2End = readPair[0].reference_end
+#
+#	if read1Start < read2Start:
+#		print("read1 < read2", file=sys.stderr)
+#		# sense strand
+#		fragment['strand'] = '+'
+#		fragment['start'] = read1Start
+#		fragment['end'] = read2End
+#		
+#	elif read2Start < read1Start:
+#		print("read1 > read2", file=sys.stderr)
+#		# antisense strand
+#		fragment['strand'] = '-'
+#		fragment['start'] = read2Start
+#		fragment['end'] = read1End
+#	else:
+#		#print("ERROR somehow read pairs are equal??",file=sys.stderr)
+#		print("ERROR EQUAL READ PAIRS")
+#
+#		print("[0]")
+#		print("Read 1?:", readPair[0].is_read1)
+#		print("Read 2?:", readPair[0].is_read2)
+#		print("is_reverse?:", readPair[0].is_reverse)
+#		print("reference_start", readPair[0].reference_start)
+#		print("reference_end", readPair[0].reference_end)
+#		print("[1]")
+#		print("Read 1?:", readPair[1].is_read1)
+#		print("Read 2?:", readPair[1].is_read2)
+#		print("is_reverse?:", readPair[1].is_reverse)
+#		print("reference_start", readPair[1].reference_start)
+#		print("reference_end", readPair[1].reference_end)
+#
+#		print(readPair[0])
+#		print(readPair[1])
+#		print(readPair[0].get_reference_positions())
+#		print(readPair[1].get_reference_positions())
+#		#sys.exit(1)
+#		return {}
+#	
+#	return fragment
 
 
 ## END FUNCTIONS ##
@@ -114,14 +232,76 @@ if (len(sys.argv) < 2):
 	print("usage:", sys.argv[0], "<name-sorted bamfile> <GENCODE gtf file>")
 	sys.exit(1)
 
-bamfile = sys.argv[1]
+bamfiles_list_file = sys.argv[1]
 gtffile = sys.argv[2]
 
 print ("DEBUG: opening GTF file", file=sys.stderr)
 gene_elements = parseGTFFile(gtffile)
 print("DEBUG: done with GTF file", file=sys.stderr)
 
+bamfiles = list()
 
+bamlist_fp = open(bamfiles_list_file, "r")
+
+for line in bamlist_fp:
+	bamfiles.append(line.rstrip('\n\r'))
+
+bamlist_fp.close()
+
+for bam in bamfiles:
+	if not checkBam(bam):
+		print("ERROR: BAM file not usable.", file=sys.stderr)
+		sys.exit(1)
+
+	bam_fp = pysam.AlignmentFile(bam, "rb")
+
+	prev_reads = list()
+	prev_read_name = ""
+
+	for read in bam_fp.fetch(until_eof = True):
+		# quality check
+		if ( read.is_secondary or 
+			read.is_duplicate or 
+			read.is_qcfail or 
+			read.is_unmapped or 
+			read.mate_is_unmapped or  
+			not read.is_paired or 
+			not read.is_proper_pair ):
+			continue
+		
+		if read.query_name == prev_read_name:
+			prev_reads.append(read)
+		else:
+			if len(prev_reads) > 0:
+				# handle last pair
+
+				# debug:
+				if len(prev_reads) != 2:
+					print ("ERROR! len(prev_reads) is",len(prev_reads), file=sys.stderr)
+					for err_reads in prev_reads:
+						print(err_reads)
+						bam_fp.close()
+						sys.exit(1)
+
+				# get start, end, strand of the FRAGMENT
+
+				frag = parseFragment(prev_reads)
+
+				if frag == {}:
+					# replace with this read
+					prev_read_name = read.query_name
+					prev_reads = [read]
+					continue
+					
+
+			# replace with this read
+			prev_read_name = read.query_name
+			prev_reads = [read]
+
+
+
+
+	bam_fp.close()
 
 """
 bam_fp = pysam.AlignmentFile(bamfile, "rb")
