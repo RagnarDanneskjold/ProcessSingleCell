@@ -57,14 +57,10 @@ def parseGTFFile (filename):
 	# guarantee sorted GTF data
 	for chrom in parsedData:
 		for strand in parsedData[chrom]:
-			parsedData[chrom][strand].sort(key=operator.itemgetter('start', 'end')) 
+			parsedData[chrom][strand].sort(key=operator.itemgetter('start', 'end'))
 			for i in range(len(parsedData[chrom][strand])):
+				print(chrom,strand,parsedData[chrom][strand][i]['start'], parsedData[chrom][strand][i]['end'])
 				parsedData[chrom][strand][i]['exons'].sort(key=operator.itemgetter('start', 'end'))
-
-	# DEBUG
-#	for chrom in parsedData:
-#		for strand in parsedData[chrom]:
-#			print("DEBUG: chrom:", chrom, "strand:", strand, "#genes:", len(parsedData[chrom][strand]), file=sys.stderr)
 
 	return parsedData
 
@@ -82,12 +78,12 @@ def overlapBases(block1, block2):
 
 	if block1['start'] < block2['start']:
 		if block1['end'] < block2['end']:
-			return block1['end'] - block2['start']
+			return block1['end'] - block2['start'] 
 		else:
-			return block2['end'] - block2['start']
+			return block2['end'] - block2['start'] 
 	else:
 		if block1['end'] < block2['end']:
-			return block1['end'] - block1['start']
+			return block1['end'] - block1['start'] 
 		else:
 			return block2['end'] - block1['start']
 
@@ -104,7 +100,6 @@ def rangeBsearch(queryStart, queryEnd, data):
 		return []
 
 	return [lower_bound, upper_bound]
-#	return data[lower_bound:upper_bound]
 
 
 def rangeBsearchUpper(queryStart, queryEnd, data):
@@ -168,6 +163,9 @@ def parseFragment(readPair):
 			'end':0
 			}
 
+	print("readPair[0]:",readPair[0].reference_start, readPair[0].reference_end)
+	print("readPair[1]:",readPair[1].reference_start, readPair[1].reference_end)
+
 	if readPair[0].is_reverse == readPair[1].is_reverse:
 		print("ERROR READS ARE SAME DIRECTION",file=sys.stderr)
 		return {}
@@ -190,8 +188,65 @@ def parseFragment(readPair):
 			fragment['start'] = readPair[0].reference_start
 			fragment['end'] = readPair[1].reference_end
 			fragment['strand'] = '-'
+	
+	print(readPair[0].query_name, fragment)
 	return fragment
 
+def readQualityCheck(read):
+	if ( read.is_secondary or 
+		read.is_duplicate or 
+		read.is_qcfail or 
+		read.is_unmapped or 
+		read.mate_is_unmapped or  
+		not read.is_paired or 
+		not read.is_proper_pair ):
+		return False
+
+	return True
+
+def overlapGenes(gene_elements, prev_reads):
+	curr_chrom = prev_reads[0].reference_id
+	curr_chrom = "chr" + str(curr_chrom)
+
+	if len(prev_reads) == 2 and curr_chrom in gene_elements:
+		# get start, end, strand of the FRAGMENT
+		frag = parseFragment(prev_reads)
+		if frag == {}:
+			return 
+
+		overlap_indicies = rangeBsearch(frag['start'], frag['end'],
+
+				gene_elements[curr_chrom][frag['strand']])
+
+		if overlap_indicies == []:
+			return 
+
+		low_index = overlap_indicies[0]
+		high_index = overlap_indicies[1]
+
+		if high_index - low_index > 1:
+			# this read overlaps multiple elements
+			highest_overlap_index = -1
+			curr_highest = 0
+			found_equal = False
+
+			for i in range(low_index, high_index):
+				score = overlapBases(gene_elements[curr_chrom][frag['strand']][i],frag)
+				if score > curr_highest:
+					found_equal = False
+					highest_overlap_index = i
+					curr_highest = score
+				elif score == curr_highest:
+					found_equal = True
+
+			if found_equal and highest_overlap_index > -1:
+				gene_elements[curr_chrom][frag['strand']][highest_overlap_index]['reads'].append(frag)
+
+		else: # 1 element
+			gene_elements[curr_chrom][frag['strand']][low_index]['reads'].append(frag)
+
+# FIXME handle exons/introns later
+	return 
 
 ## END FUNCTIONS ##
 
@@ -228,91 +283,24 @@ for bam in bamfiles:
 
 	for read in bam_fp.fetch(until_eof = True):
 		# quality check
-		if ( read.is_secondary or 
-			read.is_duplicate or 
-			read.is_qcfail or 
-			read.is_unmapped or 
-			read.mate_is_unmapped or  
-			not read.is_paired or 
-			not read.is_proper_pair ):
+		if not readQualityCheck(read):
 			continue
 		
 		if read.query_name == prev_read_name:
 			prev_reads.append(read)
 		else:
-			if (len(prev_reads) > 0 and
-					"chr" + str(prev_reads[0].reference_id) in gene_elements
-					):
-				# handle last pair
-				# FIXME find a way to handle the last pair in the entire bam file
-				# debug:
-				if len(prev_reads) != 2:
-					print ("ERROR! len(prev_reads) is",len(prev_reads), file=sys.stderr)
-					for err_reads in prev_reads:
-						print(err_reads)
-						bam_fp.close()
-						sys.exit(1)
+			if len(prev_reads) == 2:
+				overlapGenes(gene_elements, prev_reads)
 
-				# get start, end, strand of the FRAGMENT
-				frag = parseFragment(prev_reads)
-
-				if frag == {}:
-					# replace with this read
-					prev_read_name = read.query_name
-					prev_reads = [read]
-					continue
-				curr_chrom = prev_reads[0].reference_id
-				curr_chrom = "chr" + str(curr_chrom)
-
-				overlap_indicies = rangeBsearch(frag['start'], frag['end'], 
-						gene_elements[curr_chrom][frag['strand']])
-				if overlap_indicies == []:
-					prev_read_name = read.query_name
-					prev_reads = [read]
-					continue
-
-
-				if overlap_indicies[0] - overlap_indicies[1] > 1:
-					# this read overlaps multiple elements
-					highest_overlap_index = []
-					curr_highest = 0
-
-					for i in range(overlap_indicies[0], overlap_indicies[1]):
-						score = overlapBases(gene_elements[curr_chrom][frag['strand']][i],frag)
-						if score >= curr_highest:
-							highest_overlap_index.append(i)
-							curr_highest = score
-
-					if len(highest_overlap_index) > 1:
-						# multiple with equal overlap
-						# cannot assign?
-						pass # FIXME temporary
-					elif len(highest_overlap_index) == 1:
-						gene_elements[curr_chrom][frag['strand']][highest_overlap_index[0]]['reads'].append(frag)
-					# else overlap for all was 0, continue
-				else: # 1 element
-					gene_elements[curr_chrom][frag['strand']][overlap_indicies[0]]['reads'].append(frag)
-
-# FIXME handle exons/introns later
-			# replace with this read
 			prev_read_name = read.query_name
 			prev_reads = [read]
-
-
-
-
+		
 	bam_fp.close()
-			#parsedData[chrom][strand].append({
-			#		'gene_id':gene_id,
-			#		'start':start,
-			#		'end':end,
-			#		'exons':list(),
-			#		'intronic':list(),
-			#		'reads':list()
-			#	})
+
+	if len(prev_reads) == 2:
+		overlapGenes(gene_elements, prev_reads)
 
 outfile = open(outfilename, 'w')
-
 outfile.write('chr\tstart\tend\tstrand\tgene_id\tcount\n')
 
 #FIXME handle multiple counts for different bamfiles!
