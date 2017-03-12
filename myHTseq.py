@@ -218,8 +218,8 @@ def overlapGenes(gene_elements, prev_reads, chrom):
                 # get start, end, strand of the FRAGMENT
                 frag = parseFragment(prev_reads)
 #                print("DEBUG:IN IF, chr:", chrom, "strand:", frag['strand'])
-#                if frag == {} or frag['end'] - frag['start'] < 50 or frag['end'] - frag['start'] > 600:
-                if frag == {}:
+                if frag == {} or frag['end'] - frag['start'] < 50 or frag['end'] - frag['start'] > 600:
+       #         if frag == {}:
                         return 
 
                 overlap_indicies = rangeBsearch(frag['start'], frag['end'],
