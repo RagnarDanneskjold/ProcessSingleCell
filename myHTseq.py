@@ -261,8 +261,8 @@ def overlapGenes(gene_elements, prev_reads, chrom):
                                 elif score == curr_highest:
                                         found_equal = True
 
-#                        if not found_equal and highest_overlap_index > -1:
-                        if count == 1:
+                        if not found_equal and highest_overlap_index > -1:
+#                        if count == 1:
                                 gene_elements[chrom][frag['strand']][highest_overlap_index]['reads'].append(frag)
 
                 else: # 1 element
