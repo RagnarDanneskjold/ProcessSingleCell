@@ -78,14 +78,14 @@ def overlapBases(block1, block2):
 
         if block1['start'] < block2['start']:
                 if block1['end'] < block2['end']:
-                        return block1['end'] - block2['start'] 
+                        return block1['end'] - block2['start'] - 1 
                 else:
-                        return block2['end'] - block2['start'] 
+                        return block2['end'] - block2['start'] - 1
         else:
                 if block1['end'] < block2['end']:
-                        return block1['end'] - block1['start'] 
+                        return block1['end'] - block1['start'] - 1
                 else:
-                        return block2['end'] - block1['start']
+                        return block2['end'] - block1['start'] - 1
 
 def rangeBsearch(queryStart, queryEnd, data):
         if len(data) == 0:
@@ -218,6 +218,7 @@ def overlapGenes(gene_elements, prev_reads, chrom):
                 # get start, end, strand of the FRAGMENT
                 frag = parseFragment(prev_reads)
 #                print("DEBUG:IN IF, chr:", chrom, "strand:", frag['strand'])
+#                if frag == {} or frag['end'] - frag['start'] < 50 or frag['end'] - frag['start'] > 600:
                 if frag == {}:
                         return 
 
@@ -236,14 +237,23 @@ def overlapGenes(gene_elements, prev_reads, chrom):
 #                print("low_index:",low_index)
 #                print("high_index:",high_index)
 
-                if high_index - low_index > 1:
-                        # this read overlaps multiple elements
+                if high_index != low_index :
+                        # this read MAY overlap multiple elements
                         highest_overlap_index = -1
                         curr_highest = 0
                         found_equal = False
+                        count = 0
+                        high = high_index + 1
 
-                        for i in range(low_index, high_index):
+                        if high_index >= len(gene_elements[chrom][frag['strand']]):
+                                high = high_index
+
+                        for i in range(low_index, high):
+
                                 score = overlapBases(gene_elements[chrom][frag['strand']][i],frag)
+                                if score > 0:
+                                    count += 1
+
                                 if score > curr_highest:
                                         found_equal = False
                                         highest_overlap_index = i
@@ -251,7 +261,8 @@ def overlapGenes(gene_elements, prev_reads, chrom):
                                 elif score == curr_highest:
                                         found_equal = True
 
-                        if found_equal and highest_overlap_index > -1:
+#                        if not found_equal and highest_overlap_index > -1:
+                        if count == 1:
                                 gene_elements[chrom][frag['strand']][highest_overlap_index]['reads'].append(frag)
 
                 else: # 1 element
@@ -316,7 +327,7 @@ for bam in bamfiles:
         bam_fp.close()
 
 outfile = open(outfilename, 'w')
-outfile.write('chr\tstart\tend\tstrand\tgene_id\tcount\n')
+#outfile.write('chr\tstart\tend\tstrand\tgene_id\tcount\n')
 
 #FIXME handle multiple counts for different bamfiles!
 for chrom in gene_elements:
