@@ -59,7 +59,7 @@ def parseGTFFile (filename):
                 for strand in parsedData[chrom]:
                         parsedData[chrom][strand].sort(key=operator.itemgetter('start', 'end'))
                         for i in range(len(parsedData[chrom][strand])):
-                                print(chrom,strand,parsedData[chrom][strand][i]['start'], parsedData[chrom][strand][i]['end'])
+#                                print(chrom,strand,parsedData[chrom][strand][i]['start'], parsedData[chrom][strand][i]['end'])
                                 parsedData[chrom][strand][i]['exons'].sort(key=operator.itemgetter('start', 'end'))
 
         return parsedData
@@ -89,14 +89,14 @@ def overlapBases(block1, block2):
 
 def rangeBsearch(queryStart, queryEnd, data):
         if len(data) == 0:
-            print("ERROR: len(data) == 0!")
+#            print("ERROR: len(data) == 0!")
             return []
-        print("data[0]Start:", data[0]['start'], "data[0]End", data[0]['end'])
-        print("start", queryStart, "end", queryEnd)
+#        print("data[0]Start:", data[0]['start'], "data[0]End", data[0]['end'])
+#        print("start", queryStart, "end", queryEnd)
         upper_bound = rangeBsearchUpper(queryStart, queryEnd, data)
         lower_bound = rangeBsearchLower(queryStart, queryEnd, data)
 
-        print("data:", len(data), "lower:", lower_bound, "upper:", upper_bound)
+#        print("data:", len(data), "lower:", lower_bound, "upper:", upper_bound)
 
         if (lower_bound >= len(data) or
                         not overlap(data[lower_bound], {
@@ -171,9 +171,9 @@ def parseFragment(readPair):
                         }
 
 
-        print("name:", readPair[0].query_name)
-        print("readPair[0]:",readPair[0].reference_start, readPair[0].reference_end)
-        print("readPair[1]:",readPair[1].reference_start, readPair[1].reference_end)
+#        print("name:", readPair[0].query_name)
+#        print("readPair[0]:",readPair[0].reference_start, readPair[0].reference_end)
+#        print("readPair[1]:",readPair[1].reference_start, readPair[1].reference_end)
  
         if readPair[0].is_reverse == readPair[1].is_reverse:
                 print("ERROR READS ARE SAME DIRECTION",file=sys.stderr)
@@ -217,7 +217,7 @@ def overlapGenes(gene_elements, prev_reads, chrom):
         if len(prev_reads) == 2 and chrom in gene_elements:
                 # get start, end, strand of the FRAGMENT
                 frag = parseFragment(prev_reads)
-                print("DEBUG:IN IF, chr:", chrom, "strand:", frag['strand'])
+#                print("DEBUG:IN IF, chr:", chrom, "strand:", frag['strand'])
                 if frag == {}:
                         return 
 
@@ -225,16 +225,16 @@ def overlapGenes(gene_elements, prev_reads, chrom):
 
                                 gene_elements[chrom][frag['strand']])
 
-                print("overlap_indicies = ", overlap_indicies)
+#                print("overlap_indicies = ", overlap_indicies)
                 if overlap_indicies == []:
                         return 
 
                 low_index = overlap_indicies[0]
                 high_index = overlap_indicies[1]
 
-                print("DEBUG:read:",frag)
-                print("low_index:",low_index)
-                print("high_index:",high_index)
+#                print("DEBUG:read:",frag)
+#                print("low_index:",low_index)
+#                print("high_index:",high_index)
 
                 if high_index - low_index > 1:
                         # this read overlaps multiple elements
