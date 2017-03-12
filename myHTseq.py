@@ -218,8 +218,8 @@ def overlapGenes(gene_elements, prev_reads, chrom):
                 # get start, end, strand of the FRAGMENT
                 frag = parseFragment(prev_reads)
 #                print("DEBUG:IN IF, chr:", chrom, "strand:", frag['strand'])
-                if frag == {} or frag['end'] - frag['start'] < 50 or frag['end'] - frag['start'] > 600:
-       #         if frag == {}:
+#                if frag == {} or frag['end'] - frag['start'] < 50 or frag['end'] - frag['start'] > 600:
+                if frag == {} or frag['end'] - frag['start'] < 50:
                         return 
 
                 overlap_indicies = rangeBsearch(frag['start'], frag['end'],
@@ -261,8 +261,8 @@ def overlapGenes(gene_elements, prev_reads, chrom):
                                 elif score == curr_highest:
                                         found_equal = True
 
-                        if not found_equal and highest_overlap_index > -1:
-#                        if count == 1:
+#                        if not found_equal and highest_overlap_index > -1:
+                        if count == 1:
                                 gene_elements[chrom][frag['strand']][highest_overlap_index]['reads'].append(frag)
 
                 else: # 1 element
