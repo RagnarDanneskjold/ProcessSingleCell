@@ -19,6 +19,7 @@ bam_fp = pysam.AlignmentFile(files['bamfile'], "rb")
 prev_reads = list()
 prev_read_name = ""
 
+count = 0
 for read in bam_fp.fetch(until_eof = True):
     if not Reads.readQualityCheck(read):
         continue
@@ -26,6 +27,8 @@ for read in bam_fp.fetch(until_eof = True):
     if read.query_name == prev_read_name:
         prev_reads.append(read)
     else:
+        count+=1
+        print("FindGenes read",count)
         FindGenes.runOverlapGenes(prev_reads, bam_fp, genes)
 
         prev_read_name = read.query_name

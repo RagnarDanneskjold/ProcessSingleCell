@@ -30,7 +30,7 @@ def printOutput(outfilename, gene_elements):
             for gene in gene_elements[chrom][strand]['genes']:
                 outstr = chrom + '\t' + str(gene['start']) + '\t' +\
                         str(gene['end']) + '\t' + strand + '\t' +\
-                        gene['gene_id'] + '\t' + str(len(gene['reads'])) +\
+                        gene['gene_id'] + '\t' + str(gene['reads']) +\
                         '\n'
 
                 outfile.write(outstr)

@@ -51,15 +51,16 @@ def overlapGenes(gene_elements, frag, chrom):
 #        if found_equal:
 #            return False
 
-    if overlapExons(gene_elements[chrom][frag['strand']]['genes'][overlap_indicies[0]]['exons'], frag):
-        gene_elements[chrom][frag['strand']]['genes'][overlap_indicies[0]]['reads'].append(frag)
-        return True
-
-    return False
-
-def overlapExons(gene, frag):
-    for exon in gene:
-        if Overlaps.overlap(exon,frag):
+#    if overlapExons(gene_elements[chrom][frag['strand']]['genes'][overlap_indicies[0]]['exons'], frag):
+        if gene_elements[chrom][frag['strand']]['genes'][overlap_indicies[0]]['exons'].findNodeBool(frag):
+            gene_elements[chrom][frag['strand']]['genes'][overlap_indicies[0]]['reads'] += 1
             return True
 
     return False
+
+#def overlapExons(gene, frag):
+#    for exon in gene:
+#        if Overlaps.overlap(exon,frag):
+#            return True
+#
+#    return False

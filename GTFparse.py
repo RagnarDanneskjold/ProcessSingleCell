@@ -165,6 +165,43 @@ class MyTree:
             return True
         return False
 
+    def findNodeBool(self, interval):
+#        print("nodelist:",len(self.nodelist))
+        if self.nodelist == []:
+            return False
+        else:
+            curr_node = 0
+            overlap_list = []
+            node_stack = []
+            stack_curr_index = -1
+            done = False
+            while not done:
+                if curr_node != -1:
+                    node_stack.append(curr_node)
+                    if (self.nodelist[curr_node].left != -1 and
+                            self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']):
+                        curr_node = self.nodelist[curr_node].left
+                    else:
+                        curr_node = -1
+#                    print("left:", curr_node)
+                else:
+                    if len(node_stack) > 0:
+                        curr_node = node_stack.pop()
+#                        print(curr_node)
+                        
+                        if self.nodeOverlap(interval, curr_node):
+                            return True
+
+                        if (self.nodelist[curr_node].right != -1 and
+                                self.nodelist[self.nodelist[curr_node].right].subtreeMin < interval['end']):
+                            curr_node = self.nodelist[curr_node].right
+                        else:
+                            curr_node = -1
+                    else:
+                        done = True
+
+            return False
+
     def findNode(self, interval):
 #        print("nodelist:",len(self.nodelist))
         if self.nodelist == []:
@@ -298,15 +335,18 @@ def parseGTFFile (gtf_fp):
                 'gene_id':fields['gene_id'],
                 'start':fields['start'],
                 'end':fields['end'],
-                'exons':list(),
-                'reads':list()
+                'exons': MyTree(),
+                'reads': 0
                 })
 
         else: # exon
             curr_index = len(parsedData[fields['chrom']][fields['strand']]['genes']) - 1
-            parsedData[fields['chrom']][fields['strand']]['genes'][curr_index]['exons'].append({
-                'start':fields['start'],
-                'end':fields['end']
-                })
+#            parsedData[fields['chrom']][fields['strand']]['genes'][curr_index]['exons'].append({
+#                'start':fields['start'],
+#                'end':fields['end']
+#                })
+            
+            # the index doesn't matter
+            parsedData[fields['chrom']][fields['strand']]['genes'][curr_index]['exons'].addNode(fields, curr_index)
       
     return parsedData
