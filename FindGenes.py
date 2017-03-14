@@ -18,19 +18,24 @@ def runOverlapGenes(prev_reads, bam_fp, genes):
 
 def overlapGenes(gene_elements, frag, chrom):
 #    print(chrom,frag)
-    overlap_indicies = Searches.rangeBsearch(frag['start'], frag['end'],
-        gene_elements[chrom][frag['strand']])
+#    overlap_indicies = Searches.rangeBsearch(frag['start'], frag['end'],
+#        gene_elements[chrom][frag['strand']])
+#    print("overlapGenes()")
+
+    overlap_indicies = gene_elements[chrom][frag['strand']]['tree'].findNode(frag)
+
+#    print(overlap_indicies)
 
 #    print("overlap_indicies:",overlap_indicies)
-    if overlap_indicies == []:
+    if overlap_indicies == [] or len(overlap_indicies) > 1:
         return False
 
-    low_index = overlap_indicies[0]
-    high_index = overlap_indicies[1]
-    overlap_gene_index = low_index
+#    low_index = overlap_indicies[0]
+#    high_index = overlap_indicies[1]
+#    overlap_gene_index = low_index
 
-    if (high_index - low_index) > 1:
-        return False
+#    if (high_index - low_index) > 1:
+#        return False
 #        curr_highest = 0
 #        found_equal = False
 
@@ -46,8 +51,8 @@ def overlapGenes(gene_elements, frag, chrom):
 #        if found_equal:
 #            return False
 
-    if overlapExons(gene_elements[chrom][frag['strand']][overlap_gene_index]['exons'], frag):
-        gene_elements[chrom][frag['strand']][overlap_gene_index]['reads'].append(frag)
+    if overlapExons(gene_elements[chrom][frag['strand']]['genes'][overlap_indicies[0]]['exons'], frag):
+        gene_elements[chrom][frag['strand']]['genes'][overlap_indicies[0]]['reads'].append(frag)
         return True
 
     return False
