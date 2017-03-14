@@ -28,7 +28,7 @@ for read in bam_fp.fetch(until_eof = True):
         prev_reads.append(read)
     else:
         count+=1
-        print("FindGenes read",count)
+#        print("FindGenes read",count)
         FindGenes.runOverlapGenes(prev_reads, bam_fp, genes)
 
         prev_read_name = read.query_name

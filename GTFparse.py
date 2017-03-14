@@ -140,13 +140,11 @@ class MyTree:
             curr_min = self.nodelist[self.root].subtreeMin
 
             while(1):
-                if curr_max > self.nodelist[curr_node].subtreeMax:
-                    self.nodelist[curr_node].subtreeMax = curr_max
-
-                if curr_min < self.nodelist[curr_node].subtreeMin:
-                    self.nodelist[curr_node].subtreeMin = curr_min
 
                 if self.comp(curr_node, interval) == -1:
+                    if interval['start'] < self.nodelist[curr_node].subtreeMin:
+                        self.nodelist[curr_node].subtreeMin = interval['start']
+
                     if self.nodelist[curr_node].left == -1:
                         self.nodelist[curr_node].left = len(self.nodelist)
                         self.nodelist.append(MyNode(interval, index, curr_min, curr_max))
@@ -154,7 +152,10 @@ class MyTree:
                     else:
                         curr_node = self.nodelist[curr_node].left
                 else:
+                    if interval['end'] > self.nodelist[curr_node].subtreeMax:
+                        self.nodelist[curr_node].subtreeMax = interval['end']
                     if self.nodelist[curr_node].right == -1:
+
                         self.nodelist[curr_node].right = len(self.nodelist)
                         self.nodelist.append(MyNode(interval, index, curr_min, curr_max))
                         break
@@ -163,17 +164,26 @@ class MyTree:
 
     def recursive_rebuild(self, sort_nodes, start_index, end_index):
         if start_index > end_index:
-            return [-1,-1,-1]
+            return []
 
         mid_index = (start_index + end_index) // 2
         curr_root = sort_nodes[mid_index]
 
         left_values = self.recursive_rebuild(sort_nodes, start_index, mid_index - 1)
-        self.nodelist[curr_root].left = left_values[0] 
-        self.nodelist[curr_root].subtreeMin = left_values[1] 
+        if left_values != []:
+            self.nodelist[curr_root].left = left_values[0] 
+            self.nodelist[curr_root].subtreeMin = left_values[1] 
+        else:
+            self.nodelist[curr_root].left = -1 
+            self.nodelist[curr_root].subtreeMin = self.nodelist[curr_root].start
+
         right_values = self.recursive_rebuild(sort_nodes, mid_index + 1, end_index)
-        self.nodelist[curr_root].right = right_values[0]
-        self.nodelist[curr_root].subtreeMax = right_values[2]
+        if right_values != []:
+            self.nodelist[curr_root].right = right_values[0]
+            self.nodelist[curr_root].subtreeMax = right_values[2]
+        else:
+            self.nodelist[curr_root].right = -1
+            self.nodelist[curr_root].subtreeMax = self.nodelist[curr_root].end
 
         return [curr_root, self.nodelist[curr_root].subtreeMin, self.nodelist[curr_root].subtreeMax]
 
@@ -204,8 +214,6 @@ class MyTree:
         # now rebuild tree
         root_values = self.recursive_rebuild(sort_nodes, 0,len(sort_nodes)-1)
         self.root = root_values[0]
-        self.nodelist[self.root].subtreeMin = root_values[1]
-        self.nodelist[self.root].subtreeMax = root_values[2]
 
 
     def nodeOverlap(self, interval, curr_node):
@@ -215,51 +223,72 @@ class MyTree:
         return False
 
     def findNodeBool(self, interval):
-#        print("nodelist:",len(self.nodelist))
+#        print("nodelist:",self.nodelist)
         if self.nodelist == []:
+#            print("nodelist empty")
             return False
         else:
-            curr_node = 0
-            overlap_list = []
+#            print("len nodelist:", len(self.nodelist))
+            pop_count = 0
+            curr_node = self.root
             node_stack = []
-            stack_curr_index = -1
             done = False
             while not done:
                 if curr_node != -1:
+#                    print("curr_node left:", self.nodelist[curr_node].left)
+#                    print("curr_node right:", self.nodelist[curr_node].right)
+#                    print("curr_node.subtreeMax:", self.nodelist[curr_node].subtreeMax)
+#                    print("curr_node.subtreeMin:", self.nodelist[curr_node].subtreeMin)
+#                    print("query:",interval)
                     node_stack.append(curr_node)
-                    if (self.nodelist[curr_node].left != -1 and
-                            self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']):
+                    #if (self.nodelist[curr_node].left != -1 and
+                    #        self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']):
+                    if self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']:
                         curr_node = self.nodelist[curr_node].left
                     else:
+                    #    print( "left to -1:", self.nodelist[curr_node].left )
                         curr_node = -1
-#                    print("left:", curr_node)
                 else:
                     if len(node_stack) > 0:
+                        #print(node_stack)
                         curr_node = node_stack.pop()
-#                        print(curr_node)
-                        
+                        #print("popped node:",curr_node)
+                        pop_count+=1
                         if self.nodeOverlap(interval, curr_node):
                             return True
+                        #else:
+                            #print("NOT_OVERLAP:",interval,self.nodelist[curr_node].start, self.nodelist[curr_node].end)
 
                         if (self.nodelist[curr_node].right != -1 and
                                 self.nodelist[self.nodelist[curr_node].right].subtreeMin < interval['end']):
                             curr_node = self.nodelist[curr_node].right
                         else:
                             curr_node = -1
+                       # else:
+                        #    curr_node = -1
+                       #     print( "right to -1:", self.nodelist[curr_node].right )
+#                            print("query:",interval)
+#                            print("right:", 
+#                                    self.nodelist[self.nodelist[curr_node].right].start, 
+#                                    self.nodelist[self.nodelist[curr_node].right].end, "min is:", 
+#                                    self.nodelist[self.nodelist[curr_node].right].subtreeMin)
+#                            if (self.nodelist[self.nodelist[curr_node].right].subtreeMin < interval['end']):
+#                                print("???")
+#                            else:
+#                                print("right is:", self.nodelist[curr_node].right)
                     else:
                         done = True
 
+            #print("did not find:popcount", pop_count)
             return False
 
     def findNode(self, interval):
-#        print("nodelist:",len(self.nodelist))
         if self.nodelist == []:
             return []
         else:
-            curr_node = 0
+            curr_node = self.root
             overlap_list = []
             node_stack = []
-            stack_curr_index = -1
             done = False
             while not done:
                 if curr_node != -1:
@@ -269,7 +298,6 @@ class MyTree:
                         curr_node = self.nodelist[curr_node].left
                     else:
                         curr_node = -1
-#                    print("left:", curr_node)
                 else:
                     if len(node_stack) > 0:
                         curr_node = node_stack.pop()
@@ -385,6 +413,7 @@ def parseGTFFile (gtf_fp):
                 'start':fields['start'],
                 'end':fields['end'],
                 'exons': MyTree(),
+#                'exons': list(),
                 'reads': 0
                 })
 
@@ -397,9 +426,14 @@ def parseGTFFile (gtf_fp):
             
             # the index doesn't matter
             parsedData[fields['chrom']][fields['strand']]['genes'][curr_index]['exons'].addNode(fields, curr_index)
-    
+   
+    print("balancing", file=sys.stderr)
     for chrom in parsedData:
         for strand in parsedData[chrom]:
             parsedData[chrom][strand]['tree'].balance()
-    
+            for i in range(len(parsedData[chrom][strand]['genes'])):
+                parsedData[chrom][strand]['genes'][i]['exons'].balance()
+
+    print("done balancing", file=sys.stderr)
+
     return parsedData
