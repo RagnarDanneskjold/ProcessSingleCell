@@ -8,7 +8,9 @@ if not files:
     print("usage: python3 FastCount.py <path/to/bamfile> <path/to/GTF> <path/to/outfile>")
     sys.exit(1)
 
-genes = GTFparse.parseGTFFile(files['gtffile'])
+gtf_fp = open(files['gtffile'],"r")
+genes = GTFparse.parseGTFFile(gtf_fp)
+gtf_fp.close()
 
 bam_fp = pysam.AlignmentFile(files['bamfile'], "rb")
 prev_reads = list()

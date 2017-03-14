@@ -9,25 +9,22 @@ def parseFragment(readPair):
         print("ERROR READS ARE SAME DIRECTION",file=sys.stderr)
         return {}
 
-    if readPair[0].is_read1:
-        if not readPair[0].is_reverse:
-            fragment['start'] = readPair[0].reference_start
-            fragment['end'] = readPair[1].reference_end
-            fragment['strand'] = '+'
-        else:
-            fragment['start'] = readPair[1].reference_start
-            fragment['end'] = readPair[0].reference_end
-            fragment['strand'] = '-'
-    elif readPair[1].is_read1:
-        if not readPair[1].is_reverse:
-            fragment['start'] = readPair[1].reference_start
-            fragment['end'] = readPair[0].reference_end
-            fragment['strand'] = '+'
-        else:
-            fragment['start'] = readPair[0].reference_start
-            fragment['end'] = readPair[1].reference_end
-            fragment['strand'] = '-'
-        
+    read1 = readPair[0]
+    read2 = readPair[1]
+
+    if readPair[1].is_read1:
+        read1 = readPair[1]
+        read2 = readPair[0]
+
+    if not read1.is_reverse:
+        fragment['start'] = read1.reference_start
+        fragment['end'] = read2.reference_end
+        fragment['strand'] = '+'
+    else:
+        fragment['start'] = read2.reference_start
+        fragment['end'] = read1.reference_end
+        fragment['strand'] = '-'
+
     return fragment
 
 def readQualityCheck(read):

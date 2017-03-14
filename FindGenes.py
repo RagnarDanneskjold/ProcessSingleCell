@@ -10,19 +10,18 @@ def runOverlapGenes(prev_reads, bam_fp, genes):
     chrom = bam_fp.get_reference_name(prev_reads[0].reference_id)
 
     if frag != {} and chrom in genes:
-        FindGenes.overlapGenes(genes, frag, chrom)
+        result = overlapGenes(genes, frag, chrom)
+#        print("Found overlap:",result)
         return True
 
     return False
 
 def overlapGenes(gene_elements, frag, chrom):
-#    if len(prev_reads) != 2 or chrom not in gene_elements or frag == {}:
-#        return
-#    frag = parseFragment(prev_reads)
-
-    overlap_indicies = rangeBsearch(frag['start'], frag['end'],
+#    print(chrom,frag)
+    overlap_indicies = Searches.rangeBsearch(frag['start'], frag['end'],
         gene_elements[chrom][frag['strand']])
 
+#    print("overlap_indicies:",overlap_indicies)
     if overlap_indicies == []:
         return False
 
@@ -31,23 +30,31 @@ def overlapGenes(gene_elements, frag, chrom):
     overlap_gene_index = low_index
 
     if (high_index - low_index) > 1:
-        curr_highest = 0
-        found_equal = False
+        return False
+#        curr_highest = 0
+#        found_equal = False
 
-        for i in range(low_index, high_index):
-            score = overlapBases(gene_elements[chrom][frag['strand']][i],frag)
-            if score > curr_highest:
-                found_equal = False
-                overlap_gene_index = i
-                curr_highest = score
-            elif score == curr_highest:
-                found_equal = True
+#        for i in range(low_index, high_index):
+#            score = Overlaps.overlapBases(gene_elements[chrom][frag['strand']][i],frag)
+#            if score > curr_highest:
+#                found_equal = False
+#                overlap_gene_index = i
+#                curr_highest = score
+#            elif score == curr_highest:
+#                found_equal = True
+#
+#        if found_equal:
+#            return False
 
-        if found_equal:
-            return False
+    if overlapExons(gene_elements[chrom][frag['strand']][overlap_gene_index]['exons'], frag):
+        gene_elements[chrom][frag['strand']][overlap_gene_index]['reads'].append(frag)
+        return True
 
-    gene_elements[chrom][frag['strand']][overlap_gene_index]['reads'].append(frag)
+    return False
 
-# FIXME handle exons/introns later
-    return True
+def overlapExons(gene, frag):
+    for exon in gene:
+        if Overlaps.overlap(exon,frag):
+            return True
 
+    return False

@@ -7,6 +7,11 @@ def rangeBsearch(queryStart, queryEnd, data):
     upper_bound = rangeBsearchUpper(queryStart, queryEnd, data)
     lower_bound = rangeBsearchLower(queryStart, queryEnd, data)
 
+#    print("upper:",upper_bound, "lower:",lower_bound, "data len:",len(data))
+
+    #print("queryStart", queryStart, "queryEnd", queryEnd)
+    #print("lower bound:",data[lower_bound])
+
     if (lower_bound >= len(data) or
         not overlap(data[lower_bound], {
             'start':queryStart,
@@ -38,11 +43,15 @@ def rangeBsearchLower(queryStart, queryEnd, data):
 
     while lower <= upper:
         mid = (lower + upper) // 2
-
+#        print(mid, "mid[start]:",data[mid]['start'],"mid[end]:", data[mid]['end'], "queryStart:",queryStart, "queryEnd:",queryEnd)
         if data[mid]['end'] <= queryStart:
             lower = mid + 1
         else:
             upper = mid - 1
-        
+ 
+# this won't work as long as we have overlaps
+#    while( lower > 0 && overlap(data[lower-1], {'start':queryStart, 'end':queryEnd}) ):
+#        lower -= 1
+
     return lower
 
