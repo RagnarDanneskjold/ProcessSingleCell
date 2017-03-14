@@ -8,10 +8,13 @@ if not files:
     print("usage: python3 FastCount.py <path/to/bamfile> <path/to/GTF> <path/to/outfile>")
     sys.exit(1)
 
+print("Start GTF file", file=sys.stderr)
 gtf_fp = open(files['gtffile'],"r")
 genes = GTFparse.parseGTFFile(gtf_fp)
 gtf_fp.close()
+print("End GTF file", file=sys.stderr)
 
+print("Start BAM file", file=sys.stderr)
 bam_fp = pysam.AlignmentFile(files['bamfile'], "rb")
 prev_reads = list()
 prev_read_name = ""
@@ -30,5 +33,8 @@ for read in bam_fp.fetch(until_eof = True):
 
 FindGenes.runOverlapGenes(prev_reads, bam_fp, genes)
 bam_fp.close()
+print("End BAM file", file=sys.stderr)
 
+print("Start outputting", file=sys.stderr)
 InputOutput.printOutput(files['outfile'],genes)
+print("End outputting", file=sys.stderr)

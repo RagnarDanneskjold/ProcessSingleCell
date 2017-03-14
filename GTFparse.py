@@ -105,10 +105,11 @@ import operator
 #        return curr_list
 
 class MyNode:
-    def __init__(self, interval, gene_index, submax):
+    def __init__(self, interval, gene_index, submin, submax):
         self.start = interval['start']
         self.end = interval['end']
         self.subtreeMax = submax
+        self.subtreeMin = submin
         self.index = gene_index
         self.left = -1
         self.right = -1
@@ -130,26 +131,30 @@ class MyTree:
 
     def addNode(self, interval, index):
         if self.nodelist == []:
-            self.nodelist.append(MyNode(interval, index, interval['end']))
+            self.nodelist.append(MyNode(interval, index, interval['start'], interval['end']))
         else:
             curr_node = 0
             curr_max = self.nodelist[0].subtreeMax
+            curr_min = self.nodelist[0].subtreeMin
 
             while(1):
                 if curr_max > self.nodelist[curr_node].subtreeMax:
                     self.nodelist[curr_node].subtreeMax = curr_max
 
+                if curr_min < self.nodelist[curr_node].subtreeMin:
+                    self.nodelist[curr_node].subtreeMin = curr_min
+
                 if self.comp(curr_node, interval) == -1:
                     if self.nodelist[curr_node].left == -1:
                         self.nodelist[curr_node].left = len(self.nodelist)
-                        self.nodelist.append(MyNode(interval, index, curr_max))
+                        self.nodelist.append(MyNode(interval, index, curr_min, curr_max))
                         break
                     else:
                         curr_node = self.nodelist[curr_node].left
                 else:
                     if self.nodelist[curr_node].right == -1:
                         self.nodelist[curr_node].right = len(self.nodelist)
-                        self.nodelist.append(MyNode(interval, index, curr_max))
+                        self.nodelist.append(MyNode(interval, index, curr_min, curr_max))
                         break
                     else:
                         curr_node = self.nodelist[curr_node].right
@@ -161,7 +166,7 @@ class MyTree:
         return False
 
     def findNode(self, interval):
-        print("nodelist:",len(self.nodelist))
+#        print("nodelist:",len(self.nodelist))
         if self.nodelist == []:
             return []
         else:
@@ -173,17 +178,25 @@ class MyTree:
             while not done:
                 if curr_node != -1:
                     node_stack.append(curr_node)
-                    curr_node = self.nodelist[curr_node].left
-                    print("left:", curr_node)
+                    if (self.nodelist[curr_node].left != -1 and
+                            self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']):
+                        curr_node = self.nodelist[curr_node].left
+                    else:
+                        curr_node = -1
+#                    print("left:", curr_node)
                 else:
                     if len(node_stack) > 0:
                         curr_node = node_stack.pop()
-                        print(curr_node)
+#                        print(curr_node)
                         
                         if self.nodeOverlap(interval, curr_node):
                             overlap_list.append(self.nodelist[curr_node].index)
 
-                        curr_node = self.nodelist[curr_node].right
+                        if (self.nodelist[curr_node].right != -1 and
+                                self.nodelist[self.nodelist[curr_node].right].subtreeMin < interval['end']):
+                            curr_node = self.nodelist[curr_node].right
+                        else:
+                            curr_node = -1
                     else:
                         done = True
 
