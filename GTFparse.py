@@ -117,6 +117,7 @@ class MyNode:
 class MyTree:
     def __init__(self):
         self.nodelist = []
+        self.root = -1
 
     def comp(self, curr_node, interval):
         if interval['start'] < self.nodelist[curr_node].start:
@@ -132,10 +133,11 @@ class MyTree:
     def addNode(self, interval, index):
         if self.nodelist == []:
             self.nodelist.append(MyNode(interval, index, interval['start'], interval['end']))
+            self.root = 0
         else:
-            curr_node = 0
-            curr_max = self.nodelist[0].subtreeMax
-            curr_min = self.nodelist[0].subtreeMin
+            curr_node = self.root
+            curr_max = self.nodelist[self.root].subtreeMax
+            curr_min = self.nodelist[self.root].subtreeMin
 
             while(1):
                 if curr_max > self.nodelist[curr_node].subtreeMax:
@@ -158,6 +160,53 @@ class MyTree:
                         break
                     else:
                         curr_node = self.nodelist[curr_node].right
+
+    def recursive_rebuild(self, sort_nodes, start_index, end_index):
+        if start_index > end_index:
+            return [-1,-1,-1]
+
+        mid_index = (start_index + end_index) // 2
+        curr_root = sort_nodes[mid_index]
+
+        left_values = self.recursive_rebuild(sort_nodes, start_index, mid_index - 1)
+        self.nodelist[curr_root].left = left_values[0] 
+        self.nodelist[curr_root].subtreeMin = left_values[1] 
+        right_values = self.recursive_rebuild(sort_nodes, mid_index + 1, end_index)
+        self.nodelist[curr_root].right = right_values[0]
+        self.nodelist[curr_root].subtreeMax = right_values[2]
+
+        return [curr_root, self.nodelist[curr_root].subtreeMin, self.nodelist[curr_root].subtreeMax]
+
+    def balance(self):
+        # perform in-order traversal
+        sort_nodes = []
+        if self.nodelist == []:
+            return 
+        else:
+            curr_node = self.root
+            node_stack = []
+            done = False
+            while not done:
+                if curr_node != -1:
+                    node_stack.append(curr_node)
+                    curr_node = self.nodelist[curr_node].left
+                else:
+                    if len(node_stack) > 0:
+                        curr_node = node_stack.pop()
+            
+                        sort_nodes.append(curr_node)
+
+                        curr_node = self.nodelist[curr_node].right
+                    else:
+                        done = True
+
+            
+        # now rebuild tree
+        root_values = self.recursive_rebuild(sort_nodes, 0,len(sort_nodes)-1)
+        self.root = root_values[0]
+        self.nodelist[self.root].subtreeMin = root_values[1]
+        self.nodelist[self.root].subtreeMax = root_values[2]
+
 
     def nodeOverlap(self, interval, curr_node):
         if (self.nodelist[curr_node].start < interval['end'] and
@@ -348,5 +397,9 @@ def parseGTFFile (gtf_fp):
             
             # the index doesn't matter
             parsedData[fields['chrom']][fields['strand']]['genes'][curr_index]['exons'].addNode(fields, curr_index)
-      
+    
+    for chrom in parsedData:
+        for strand in parsedData[chrom]:
+            parsedData[chrom][strand]['tree'].balance()
+    
     return parsedData
