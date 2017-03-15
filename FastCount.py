@@ -1,6 +1,6 @@
 import sys
 import pysam
-import Bam, FindGenes, GTFparse, InputOutput, Overlaps, Reads, Searches
+import Bam, FindGenes, GTFparse, InputOutput, Reads, Tree
 
 files = InputOutput.getInput(sys.argv)
 
@@ -18,16 +18,28 @@ print("Start BAM file", file=sys.stderr)
 bam_fp = pysam.AlignmentFile(files['bamfile'], "rb")
 prev_reads = list()
 prev_read_name = ""
+badreads = dict()
 
 for read in bam_fp.fetch(until_eof = True):
-    if not Reads.readQualityCheck(read):
+
+    print("on:", read.query_name)
+    if read.query_name == "HWI-ST999:184:C44V8ACXX:7:1101:1362:54252":
+        print("read of interest")
+
+    if not Reads.readQualityCheck(read, badreads):
+        print("skipping:", read.query_name)
+        prev_read_name = ""
         continue
 
     if read.query_name == prev_read_name:
+        print("appending:", read.query_name)
+        #print ("read query:", read.query_name, "prev_read", prev_read_name)
         prev_reads.append(read)
     else:
+        #print("on find_genes:" prev_read_name)
         FindGenes.runOverlapGenes(prev_reads, bam_fp, genes)
 
+        print("appending:",read.query_name)
         prev_read_name = read.query_name
         prev_reads = [read]
 

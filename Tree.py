@@ -8,6 +8,9 @@ class MyNode:
         self.left = -1
         self.right = -1
 
+    def getIndex(self):
+        return self.index
+
 class MyTree:
     def __init__(self):
         self.nodelist = []
@@ -24,10 +27,12 @@ class MyTree:
             else:
                 return 1
 
-    def addNode(self, interval, index):
+#    def addNode(self, interval, index):
+    def addNode(self, interval):
         if self.nodelist == []:
-            self.nodelist.append(MyNode(interval, index, interval['start'], interval['end']))
+#            self.nodelist.append(MyNode(interval, index, interval['start'], interval['end']))
             self.root = 0
+            self.nodelist.append(MyNode(interval, self.root, interval['start'], interval['end']))
         else:
             curr_node = self.root
             curr_max = self.nodelist[self.root].subtreeMax
@@ -40,8 +45,9 @@ class MyTree:
                         self.nodelist[curr_node].subtreeMin = interval['start']
 
                     if self.nodelist[curr_node].left == -1:
-                        self.nodelist[curr_node].left = len(self.nodelist)
-                        self.nodelist.append(MyNode(interval, index, curr_min, curr_max))
+                        my_index = len(self.nodelist)
+                        self.nodelist[curr_node].left = my_index
+                        self.nodelist.append(MyNode(interval, my_index, curr_min, curr_max))
                         break
                     else:
                         curr_node = self.nodelist[curr_node].left
@@ -49,9 +55,9 @@ class MyTree:
                     if interval['end'] > self.nodelist[curr_node].subtreeMax:
                         self.nodelist[curr_node].subtreeMax = interval['end']
                     if self.nodelist[curr_node].right == -1:
-
-                        self.nodelist[curr_node].right = len(self.nodelist)
-                        self.nodelist.append(MyNode(interval, index, curr_min, curr_max))
+                        my_index = len(self.nodelist)
+                        self.nodelist[curr_node].right = my_index
+                        self.nodelist.append(MyNode(interval, my_index, curr_min, curr_max))
                         break
                     else:
                         curr_node = self.nodelist[curr_node].right
@@ -116,6 +122,75 @@ class MyTree:
             return True
         return False
 
+#    def findNodeBool(self, interval):
+#        if self.nodelist == []:
+#            return False
+#        else:
+#            curr_node = self.root
+#            node_stack = []
+#            done = False
+#            while not done:
+#                if curr_node != -1:
+#                    node_stack.append(curr_node)
+#
+#                    if self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']:
+#                        curr_node = self.nodelist[curr_node].left
+#                    else:
+#                        curr_node = -1
+#                else:
+#                    if len(node_stack) > 0:
+#                        curr_node = node_stack.pop()
+#
+#                        if self.nodeOverlap(interval, curr_node):
+#                            return True
+#
+#                        if (self.nodelist[curr_node].right != -1 and
+#                                self.nodelist[self.nodelist[curr_node].right].subtreeMin < interval['end']):
+#                            curr_node = self.nodelist[curr_node].right
+#                        else:
+#                            curr_node = -1
+#                    else:
+#                        done = True
+#
+#            return False
+#
+#    def findNode(self, interval):
+#        if self.nodelist == []:
+#            return []
+#        else:
+#            curr_node = self.root
+#            overlap_list = []
+#            node_stack = []
+#            done = False
+#            while not done:
+#                if curr_node != -1:
+#                    node_stack.append(curr_node)
+#                    if (self.nodelist[curr_node].left != -1 and
+#                            self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']):
+#                        curr_node = self.nodelist[curr_node].left
+#                    else:
+#                        curr_node = -1
+#                else:
+#                    if len(node_stack) > 0:
+#                        curr_node = node_stack.pop()
+#                        
+#                        if self.nodeOverlap(interval, curr_node):
+#                            overlap_list.append(self.nodelist[curr_node].index)
+#
+#                        if (self.nodelist[curr_node].right != -1 and
+#                                self.nodelist[self.nodelist[curr_node].right].subtreeMin < interval['end']):
+#                            curr_node = self.nodelist[curr_node].right
+#                        else:
+#                            curr_node = -1
+#                    else:
+#                        done = True
+#
+#            return overlap_list
+
+class ExonTree(MyTree):
+    def __init__(self):
+        MyTree.__init__(self)
+
     def findNodeBool(self, interval):
         if self.nodelist == []:
             return False
@@ -123,6 +198,7 @@ class MyTree:
             curr_node = self.root
             node_stack = []
             done = False
+
             while not done:
                 if curr_node != -1:
                     node_stack.append(curr_node)
@@ -147,6 +223,71 @@ class MyTree:
                         done = True
 
             return False
+
+class GeneNode(MyNode):
+    def __init__(self,interval,geneid,gene_index,submin,submax):
+        MyNode.__init__(self,interval,gene_index,submin,submax)
+        self.gene_id = geneid
+        self.exons = ExonTree()
+        self.reads = 0
+
+    def getID(self):
+        return self.gene_id
+
+    def getReads(self):
+        return self.reads
+
+    def checkExons(self, interval):
+        return self.exons.findNodeBool(interval)
+
+    def writeOut(self, out_fp, mychrom, mystrand):
+        outstr = mychrom + "\t" + str(self.start) + "\t" + str(self.end) + "\t" + mystrand + "\t" + self.gene_id + "\t" + str(self.reads) + "\n"
+        out_fp.write(outstr)
+
+class GeneTree(MyTree):
+    def __init__(self):
+        MyTree.__init__(self)
+
+    def addExon(self, fields, gene_index):
+        self.nodelist[gene_index].exons.addNode(fields)
+
+
+    def strictOverlap(self,interval,index):
+        if (interval['start'] >= self.nodelist[index].start and
+                interval['end'] <= self.nodelist[index].end):
+            return True
+        return False
+
+    def overlapInterval(self,interval, TMP_PREV_READS):
+        indicies = self.findNode(interval)
+
+        if (indicies == [] or len(indicies) > 1 or
+                not self.strictOverlap(interval, indicies[0])
+                ):
+            if indicies == []:
+                print("not_overlap! interval:",interval)
+            elif len(indicies) > 1:
+                print("multiple_overlap!")
+            else:
+                print("not_strict_overlap!")
+            return False
+        
+        if self.nodelist[indicies[0]].checkExons(interval):
+            print("SUCCESS_read_added!")
+
+            if self.nodelist[indicies[0]].getID() == "ENSMUSG00000062794.8":
+                print("ID:[",self.nodelist[indicies[0]].getID(),"] start:",self.nodelist[indicies[0]].start, "end:", self.nodelist[indicies[0]].end)
+                print("Reads:\t", TMP_PREV_READS[0].query_name, "\t", TMP_PREV_READS[1].query_name)
+
+            self.nodelist[indicies[0]].reads += 1
+            return True
+
+        print("no_exon_overlap!")
+        return False
+
+    def writeTree(self, out_fp, mychrom, mystrand):
+        for i in self.nodelist: # UNSORTED OUTPUT
+            i.writeOut(out_fp, mychrom, mystrand)
 
     def findNode(self, interval):
         if self.nodelist == []:
@@ -181,4 +322,43 @@ class MyTree:
 
             return overlap_list
 
-                
+
+    def addNode(self, interval, gene_id):
+        if self.nodelist == []:
+            self.root = 0
+            self.nodelist.append(GeneNode(interval, gene_id, self.root, interval['start'], interval['end']))
+            return self.root
+        else:
+            curr_node = self.root
+            curr_max = self.nodelist[self.root].subtreeMax
+            curr_min = self.nodelist[self.root].subtreeMin
+
+            while(1):
+
+                if self.comp(curr_node, interval) == -1:
+                    if interval['start'] < self.nodelist[curr_node].subtreeMin:
+                        self.nodelist[curr_node].subtreeMin = interval['start']
+
+                    if self.nodelist[curr_node].left == -1:
+                        my_index = len(self.nodelist)
+                        self.nodelist[curr_node].left = my_index
+                        self.nodelist.append(GeneNode(interval, gene_id, my_index, curr_min, curr_max))
+                        return my_index
+                    else:
+                        curr_node = self.nodelist[curr_node].left
+                else:
+                    if interval['end'] > self.nodelist[curr_node].subtreeMax:
+                        self.nodelist[curr_node].subtreeMax = interval['end']
+                    if self.nodelist[curr_node].right == -1:
+                        my_index = len(self.nodelist)
+                        self.nodelist[curr_node].right = my_index
+                        self.nodelist.append(GeneNode(interval, gene_id, my_index, curr_min, curr_max))
+                        return my_index
+                    else:
+                        curr_node = self.nodelist[curr_node].right
+
+    def balanceAll(self):
+        self.balance()
+
+        for gene in self.nodelist:
+            gene.exons.balance()

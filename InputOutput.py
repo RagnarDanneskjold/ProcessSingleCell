@@ -27,12 +27,13 @@ def printOutput(outfilename, gene_elements):
     #FIXME handle multiple counts for different bamfiles!
     for chrom in gene_elements:
         for strand in gene_elements[chrom]:
-            for gene in gene_elements[chrom][strand]['genes']:
-                outstr = chrom + '\t' + str(gene['start']) + '\t' +\
-                        str(gene['end']) + '\t' + strand + '\t' +\
-                        gene['gene_id'] + '\t' + str(gene['reads']) +\
-                        '\n'
-
-                outfile.write(outstr)
+            gene_elements[chrom][strand].writeTree(outfile, chrom, strand)
+#            for gene in gene_elements[chrom][strand]['genes']:
+#                outstr = chrom + '\t' + str(gene['start']) + '\t' +\
+#                        str(gene['end']) + '\t' + strand + '\t' +\
+#                        gene['gene_id'] + '\t' + str(gene['reads']) +\
+#                        '\n'
+#
+#                outfile.write(outstr)
 
     outfile.close()

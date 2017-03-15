@@ -27,14 +27,17 @@ def parseFragment(readPair):
 
     return fragment
 
-def readQualityCheck(read):
+def readQualityCheck(read,badreads):
     if ( read.is_secondary or 
-        read.is_duplicate or 
+#        read.is_duplicate or 
         read.is_qcfail or 
         read.is_unmapped or 
         read.mate_is_unmapped or  
         not read.is_paired or 
-        not read.is_proper_pair ):
+        not read.is_proper_pair or
+        read.query_name in badreads
+        ):
+        badreads[read.query_name] = True
         return False
 
     return True
