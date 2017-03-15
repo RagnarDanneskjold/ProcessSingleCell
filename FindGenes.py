@@ -2,7 +2,7 @@ from Reads import parseFragment
 
 def runOverlapGenes(prev_reads, bam_fp, genes):
     if len(prev_reads) != 2:
-        print("not_pair_reads!")
+#        print("not_pair_reads!")
         return False
 
     frag = parseFragment(prev_reads)
@@ -19,7 +19,7 @@ def runOverlapGenes(prev_reads, bam_fp, genes):
 #        return True
         return genes[chrom][frag['strand']].overlapInterval(frag,prev_reads)       
 
-    print("frag_or_chrom_read_error!")
+#    print("frag_or_chrom_read_error!")
     return False
 
 #def overlapGenes(gene_elements, frag, chrom):

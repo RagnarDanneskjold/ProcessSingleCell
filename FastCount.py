@@ -22,24 +22,24 @@ badreads = dict()
 
 for read in bam_fp.fetch(until_eof = True):
 
-    print("on:", read.query_name)
-    if read.query_name == "HWI-ST999:184:C44V8ACXX:7:1101:1362:54252":
-        print("read of interest")
+#    print("on:", read.query_name)
+#    if read.query_name == "HWI-ST999:184:C44V8ACXX:7:1101:1362:54252":
+#        print("read of interest")
 
     if not Reads.readQualityCheck(read, badreads):
-        print("skipping:", read.query_name)
+#        print("skipping:", read.query_name)
         prev_read_name = ""
         continue
 
     if read.query_name == prev_read_name:
-        print("appending:", read.query_name)
+#        print("appending:", read.query_name)
         #print ("read query:", read.query_name, "prev_read", prev_read_name)
         prev_reads.append(read)
     else:
         #print("on find_genes:" prev_read_name)
         FindGenes.runOverlapGenes(prev_reads, bam_fp, genes)
 
-        print("appending:",read.query_name)
+#        print("appending:",read.query_name)
         prev_read_name = read.query_name
         prev_reads = [read]
 

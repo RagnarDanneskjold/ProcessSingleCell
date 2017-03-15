@@ -52,8 +52,8 @@ def parseGTFFile (gtf_fp):
 #                    }
 #                }
             parsedData[fields['chrom']] = dict()
-            parsedData[fields['chrom']]['+'] = GeneTree()
-            parsedData[fields['chrom']]['-'] = GeneTree()
+            parsedData[fields['chrom']]['+'] = GeneTree(fields['chrom'],'+')
+            parsedData[fields['chrom']]['-'] = GeneTree(fields['chrom'],'-')
 
         if fields['feature'] == 'gene':
             curr_gene = parsedData[fields['chrom']][fields['strand']].addNode(fields,fields['gene_id'])

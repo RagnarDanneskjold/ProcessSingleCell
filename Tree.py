@@ -72,7 +72,12 @@ class MyTree:
         left_values = self.recursive_rebuild(sort_nodes, start_index, mid_index - 1)
         if left_values != []:
             self.nodelist[curr_root].left = left_values[0] 
-            self.nodelist[curr_root].subtreeMin = left_values[1] 
+
+            if left_values[1] < self.nodelist[curr_root].start:
+                self.nodelist[curr_root].subtreeMin = left_values[1] 
+            else:
+                self.nodelist[curr_root].subtreeMin = self.nodelist[curr_root].start 
+
         else:
             self.nodelist[curr_root].left = -1 
             self.nodelist[curr_root].subtreeMin = self.nodelist[curr_root].start
@@ -80,10 +85,15 @@ class MyTree:
         right_values = self.recursive_rebuild(sort_nodes, mid_index + 1, end_index)
         if right_values != []:
             self.nodelist[curr_root].right = right_values[0]
-            self.nodelist[curr_root].subtreeMax = right_values[2]
+
+            if right_values[2] > self.nodelist[curr_root].end:
+                self.nodelist[curr_root].subtreeMax = right_values[2]
+            else:
+                self.nodelist[curr_root].subtreeMax = self.nodelist[curr_root].end
         else:
             self.nodelist[curr_root].right = -1
             self.nodelist[curr_root].subtreeMax = self.nodelist[curr_root].end
+
 
         return [curr_root, self.nodelist[curr_root].subtreeMin, self.nodelist[curr_root].subtreeMax]
 
@@ -115,77 +125,17 @@ class MyTree:
         root_values = self.recursive_rebuild(sort_nodes, 0,len(sort_nodes)-1)
         self.root = root_values[0]
 
+#        print("ROOT:",self.root)
+#        for i in range(len(self.nodelist)):
+#            print("BALANCE: root:",i,"left:",self.nodelist[i].left,"right:",self.nodelist[i].right, "my_min:",self.nodelist[i].subtreeMin, "my_max:",self.nodelist[i].subtreeMax, "start:",self.nodelist[i].start, "end:",self.nodelist[i].end)
+            
+
 
     def nodeOverlap(self, interval, curr_node):
         if (self.nodelist[curr_node].start < interval['end'] and
                 self.nodelist[curr_node].end > interval['start']):
             return True
         return False
-
-#    def findNodeBool(self, interval):
-#        if self.nodelist == []:
-#            return False
-#        else:
-#            curr_node = self.root
-#            node_stack = []
-#            done = False
-#            while not done:
-#                if curr_node != -1:
-#                    node_stack.append(curr_node)
-#
-#                    if self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']:
-#                        curr_node = self.nodelist[curr_node].left
-#                    else:
-#                        curr_node = -1
-#                else:
-#                    if len(node_stack) > 0:
-#                        curr_node = node_stack.pop()
-#
-#                        if self.nodeOverlap(interval, curr_node):
-#                            return True
-#
-#                        if (self.nodelist[curr_node].right != -1 and
-#                                self.nodelist[self.nodelist[curr_node].right].subtreeMin < interval['end']):
-#                            curr_node = self.nodelist[curr_node].right
-#                        else:
-#                            curr_node = -1
-#                    else:
-#                        done = True
-#
-#            return False
-#
-#    def findNode(self, interval):
-#        if self.nodelist == []:
-#            return []
-#        else:
-#            curr_node = self.root
-#            overlap_list = []
-#            node_stack = []
-#            done = False
-#            while not done:
-#                if curr_node != -1:
-#                    node_stack.append(curr_node)
-#                    if (self.nodelist[curr_node].left != -1 and
-#                            self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']):
-#                        curr_node = self.nodelist[curr_node].left
-#                    else:
-#                        curr_node = -1
-#                else:
-#                    if len(node_stack) > 0:
-#                        curr_node = node_stack.pop()
-#                        
-#                        if self.nodeOverlap(interval, curr_node):
-#                            overlap_list.append(self.nodelist[curr_node].index)
-#
-#                        if (self.nodelist[curr_node].right != -1 and
-#                                self.nodelist[self.nodelist[curr_node].right].subtreeMin < interval['end']):
-#                            curr_node = self.nodelist[curr_node].right
-#                        else:
-#                            curr_node = -1
-#                    else:
-#                        done = True
-#
-#            return overlap_list
 
 class ExonTree(MyTree):
     def __init__(self):
@@ -245,8 +195,10 @@ class GeneNode(MyNode):
         out_fp.write(outstr)
 
 class GeneTree(MyTree):
-    def __init__(self):
+    def __init__(self, chrom, strand):
         MyTree.__init__(self)
+        self.chrom = chrom
+        self.strand = strand
 
     def addExon(self, fields, gene_index):
         self.nodelist[gene_index].exons.addNode(fields)
@@ -258,31 +210,41 @@ class GeneTree(MyTree):
             return True
         return False
 
+#    def linearSearch(self,interval):
+#        for i in range(len(self.nodelist)):
+#            if self.nodeOverlap(interval,i):
+#                print("LINEAR_SEARCH_OVERLAP: [",i,"]:", self.nodelist[i].start, self.nodelist[i].end, interval)
+
     def overlapInterval(self,interval, TMP_PREV_READS):
+#        print("Checking Overlap:Reads:\t", TMP_PREV_READS[0].query_name, "\t", TMP_PREV_READS[1].query_name)
         indicies = self.findNode(interval)
+
+#        if TMP_PREV_READS[0].query_name == "HWI-ST999:184:C44V8ACXX:7:1101:1362:54252":
+#            self.linearSearch(interval)
+#            print("linear search done")
 
         if (indicies == [] or len(indicies) > 1 or
                 not self.strictOverlap(interval, indicies[0])
                 ):
-            if indicies == []:
-                print("not_overlap! interval:",interval)
-            elif len(indicies) > 1:
-                print("multiple_overlap!")
-            else:
-                print("not_strict_overlap!")
+ #           if indicies == []:
+#                print("not_overlap! interval:",interval)
+#            elif len(indicies) > 1:
+#                print("multiple_overlap!")
+#            else:
+#                print("not_strict_overlap!")
             return False
         
         if self.nodelist[indicies[0]].checkExons(interval):
-            print("SUCCESS_read_added!")
+#            print("SUCCESS_read_added!")
 
-            if self.nodelist[indicies[0]].getID() == "ENSMUSG00000062794.8":
-                print("ID:[",self.nodelist[indicies[0]].getID(),"] start:",self.nodelist[indicies[0]].start, "end:", self.nodelist[indicies[0]].end)
-                print("Reads:\t", TMP_PREV_READS[0].query_name, "\t", TMP_PREV_READS[1].query_name)
+#            if self.nodelist[indicies[0]].getID() == "ENSMUSG00000062794.8":
+#                print("ID:[",self.nodelist[indicies[0]].getID(),"] start:",self.nodelist[indicies[0]].start, "end:", self.nodelist[indicies[0]].end)
+#                print("Reads:\t", TMP_PREV_READS[0].query_name, "\t", TMP_PREV_READS[1].query_name)
 
             self.nodelist[indicies[0]].reads += 1
             return True
 
-        print("no_exon_overlap!")
+#       print("no_exon_overlap!")
         return False
 
     def writeTree(self, out_fp, mychrom, mystrand):
@@ -298,7 +260,9 @@ class GeneTree(MyTree):
             node_stack = []
             done = False
             while not done:
+#                print("curr node:",curr_node)
                 if curr_node != -1:
+#                    print("NODE != -1: stack pre append:",node_stack)
                     node_stack.append(curr_node)
                     if (self.nodelist[curr_node].left != -1 and
                             self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']):
@@ -306,6 +270,7 @@ class GeneTree(MyTree):
                     else:
                         curr_node = -1
                 else:
+#                    print("NODE == -1: stack pre pop:",node_stack)
                     if len(node_stack) > 0:
                         curr_node = node_stack.pop()
                         
