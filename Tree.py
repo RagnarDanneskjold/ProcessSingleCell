@@ -30,7 +30,6 @@ class MyTree:
 #    def addNode(self, interval, index):
     def addNode(self, interval):
         if self.nodelist == []:
-#            self.nodelist.append(MyNode(interval, index, interval['start'], interval['end']))
             self.root = 0
             self.nodelist.append(MyNode(interval, self.root, interval['start'], interval['end']))
         else:
@@ -124,13 +123,7 @@ class MyTree:
         # now rebuild tree
         root_values = self.recursive_rebuild(sort_nodes, 0,len(sort_nodes)-1)
         self.root = root_values[0]
-
-#        print("ROOT:",self.root)
-#        for i in range(len(self.nodelist)):
-#            print("BALANCE: root:",i,"left:",self.nodelist[i].left,"right:",self.nodelist[i].right, "my_min:",self.nodelist[i].subtreeMin, "my_max:",self.nodelist[i].subtreeMax, "start:",self.nodelist[i].start, "end:",self.nodelist[i].end)
             
-
-
     def nodeOverlap(self, interval, curr_node):
         if (self.nodelist[curr_node].start < interval['end'] and
                 self.nodelist[curr_node].end > interval['start']):
@@ -203,89 +196,32 @@ class GeneTree(MyTree):
     def addExon(self, fields, gene_index):
         self.nodelist[gene_index].exons.addNode(fields)
 
-
-    def strictOverlap(self,interval,index):
-        if (interval['start'] >= self.nodelist[index].start and
-                interval['end'] <= self.nodelist[index].end):
-            return True
-        return False
-
-#    def linearSearch(self,interval):
-#        for i in range(len(self.nodelist)):
-#            if self.nodeOverlap(interval,i):
-#                print("LINEAR_SEARCH_OVERLAP: [",i,"]:", self.nodelist[i].start, self.nodelist[i].end, interval)
-
-    def overlapInterval(self,interval, TMP_PREV_READS):
-        read = TMP_PREV_READS[0]
-        print("Checking Overlap:Reads:\t", TMP_PREV_READS[0].query_name, "\t", TMP_PREV_READS[1].query_name)
+    def overlapInterval(self,interval):
         indicies = self.findNode(interval)
 
-#        if TMP_PREV_READS[0].query_name == "HWI-ST999:184:C44V8ACXX:7:1101:1362:54252":
-#            self.linearSearch(interval)
-#            print("linear search done")
-
-        if (indicies == []): #or 
-                #len(indicies) > 1 or
-#                not self.strictOverlap(interval, indicies[0])
-#                ):
-#            if indicies == []:
-            print("not_overlap! interval:",interval)
-#            elif len(indicies) > 1:
-#                for i in indicies:
-#                    print("Gene i:",self.nodelist[i].gene_id, "start:", self.nodelist[i].start, "end:", self.nodelist[i].end)
-#                print("multiple_overlap!")
-#            else:
-#                print("not_strict_overlap!")
-            print("UNASSIGNED:",read.query_name)
+        if (indicies == []): 
             return False
 
         count_exon_overlaps = 0
         true_genes = []
+
         if len(indicies) > 1:
             for i in indicies:
-                print("multiple indicies i:",i)
-                print("Gene", i,":",self.nodelist[i].gene_id, "start:", self.nodelist[i].start, "end:", self.nodelist[i].end)
-                if (self.nodelist[i].checkExons(interval)):# and 
-#                        self.strictOverlap(interval,i)):
+                if (self.nodelist[i].checkExons(interval)): 
                     count_exon_overlaps += 1
                     true_genes.append(i)
-            print("multiple_overlap!:exon overlaps:",count_exon_overlaps)
 
-            if count_exon_overlaps > 1:
-                print("exon overlaps > 1:")
-                for i in true_genes:
-                    print("Exon overlap Gene i:",self.nodelist[i].gene_id, "start:", self.nodelist[i].start, "end:", self.nodelist[i].end)
-                print("UNASSIGNED:",read.query_name)
-                return False
-            elif count_exon_overlaps == 0:
-                print("UNASSIGNED:",read.query_name)
-                print("exon overlaps == 0")
+            if count_exon_overlaps > 1 or count_exon_overlaps == 0:
                 return False
             elif count_exon_overlaps == 1:
-                print("exon overlaps == 1! SUCCESS Adding read")
                 self.nodelist[true_genes[0]].reads += 1
                 return True
 
         
-        if (self.nodelist[indicies[0]].checkExons(interval)):# and 
-#                self.strictOverlap(interval,indicies[0])):
-            print("SUCCESS_read_added!")
-
-#            if self.nodelist[indicies[0]].getID() == "ENSMUSG00000062794.8":
-#                print("ID:[",self.nodelist[indicies[0]].getID(),"] start:",self.nodelist[indicies[0]].start, "end:", self.nodelist[indicies[0]].end)
-#                print("Reads:\t", TMP_PREV_READS[0].query_name, "\t", TMP_PREV_READS[1].query_name)
-
-
+        if (self.nodelist[indicies[0]].checkExons(interval)): 
             self.nodelist[indicies[0]].reads += 1
             return True
 
-        if not self.nodelist[indicies[0]].checkExons(interval):
-            print("exon check failed!")
-#        if not self.strictOverlap(interval,indicies[0]):
-#            print("strict overlap failed!")
-        print("indicies len is:",len(indicies))
-#       print("no_exon_overlap!")
-        print("UNASSIGNED:",read.query_name)
         return False
 
     def writeTree(self, out_fp, mychrom, mystrand):
@@ -300,10 +236,9 @@ class GeneTree(MyTree):
             overlap_list = []
             node_stack = []
             done = False
+
             while not done:
-#                print("curr node:",curr_node)
                 if curr_node != -1:
-#                    print("NODE != -1: stack pre append:",node_stack)
                     node_stack.append(curr_node)
                     if (self.nodelist[curr_node].left != -1 and
                             self.nodelist[self.nodelist[curr_node].left].subtreeMax > interval['start']):
@@ -311,7 +246,6 @@ class GeneTree(MyTree):
                     else:
                         curr_node = -1
                 else:
-#                    print("NODE == -1: stack pre pop:",node_stack)
                     if len(node_stack) > 0:
                         curr_node = node_stack.pop()
                         

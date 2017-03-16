@@ -1,6 +1,6 @@
 import sys
 import pysam
-import Bam, FindGenes, GTFparse, InputOutput, Reads, Tree
+import Bam, GTFparse, InputOutput, Reads, Tree
 
 files = InputOutput.getInput(sys.argv)
 
@@ -18,33 +18,32 @@ print("Start BAM file", file=sys.stderr)
 bam_fp = pysam.AlignmentFile(files['bamfile'], "rb")
 prev_reads = list()
 prev_read_name = ""
-badreads = dict()
 
 for read in bam_fp.fetch(until_eof = True):
-
-    print("on:", read.query_name)
-#    if read.query_name == "HWI-ST999:184:C44V8ACXX:7:1101:1362:54252":
-#        print("read of interest")
-
-    if not Reads.readQualityCheck(read, badreads):
-        print("skipping:", read.query_name)
-        print("UNASSIGNED:",read.query_name)
-#        prev_read_name = ""
+    if not Reads.readQualityCheck(read):
         continue
 
     if read.query_name == prev_read_name:
-        print("appending:", read.query_name)
-        print ("read query:", read.query_name, "prev_read", prev_read_name)
         prev_reads.append(read)
     else:
-        #print("on find_genes:" prev_read_name)
-        FindGenes.runOverlapGenes(prev_reads, bam_fp, genes)
+        if len(prev_reads) == 2:
+            chrom = bam_fp.get_reference_name(prev_reads[0].reference_id)
+            frag = Reads.parseFragment(prev_reads,chrom)
 
-        print("appending:",read.query_name)
+            if frag != {} and chrom in genes:
+                genes[chrom][frag['strand']].overlapInterval(frag)
+
         prev_read_name = read.query_name
         prev_reads = [read]
 
-FindGenes.runOverlapGenes(prev_reads, bam_fp, genes)
+
+if len(prev_reads) == 2:
+    chrom = bam_fp.get_reference_name(prev_reads[0].reference_id)
+    frag = Reads.parseFragment(prev_reads,chrom)
+
+    if frag != {} and chrom in genes:
+        genes[chrom][frag['strand']].overlapInterval(frag)
+
 bam_fp.close()
 print("End BAM file", file=sys.stderr)
 
