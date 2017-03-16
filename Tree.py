@@ -216,6 +216,7 @@ class GeneTree(MyTree):
 #                print("LINEAR_SEARCH_OVERLAP: [",i,"]:", self.nodelist[i].start, self.nodelist[i].end, interval)
 
     def overlapInterval(self,interval, TMP_PREV_READS):
+        read = TMP_PREV_READS[0]
         print("Checking Overlap:Reads:\t", TMP_PREV_READS[0].query_name, "\t", TMP_PREV_READS[1].query_name)
         indicies = self.findNode(interval)
 
@@ -223,18 +224,19 @@ class GeneTree(MyTree):
 #            self.linearSearch(interval)
 #            print("linear search done")
 
-        if (indicies == [] or 
+        if (indicies == []): #or 
                 #len(indicies) > 1 or
-                not self.strictOverlap(interval, indicies[0])
-                ):
-            if indicies == []:
-                print("not_overlap! interval:",interval)
+#                not self.strictOverlap(interval, indicies[0])
+#                ):
+#            if indicies == []:
+            print("not_overlap! interval:",interval)
 #            elif len(indicies) > 1:
 #                for i in indicies:
 #                    print("Gene i:",self.nodelist[i].gene_id, "start:", self.nodelist[i].start, "end:", self.nodelist[i].end)
 #                print("multiple_overlap!")
-            else:
-                print("not_strict_overlap!")
+#            else:
+#                print("not_strict_overlap!")
+            print("UNASSIGNED:",read.query_name)
             return False
 
         count_exon_overlaps = 0
@@ -243,7 +245,8 @@ class GeneTree(MyTree):
             for i in indicies:
                 print("multiple indicies i:",i)
                 print("Gene", i,":",self.nodelist[i].gene_id, "start:", self.nodelist[i].start, "end:", self.nodelist[i].end)
-                if self.nodelist[i].checkExons(interval):
+                if (self.nodelist[i].checkExons(interval)):# and 
+#                        self.strictOverlap(interval,i)):
                     count_exon_overlaps += 1
                     true_genes.append(i)
             print("multiple_overlap!:exon overlaps:",count_exon_overlaps)
@@ -252,8 +255,10 @@ class GeneTree(MyTree):
                 print("exon overlaps > 1:")
                 for i in true_genes:
                     print("Exon overlap Gene i:",self.nodelist[i].gene_id, "start:", self.nodelist[i].start, "end:", self.nodelist[i].end)
+                print("UNASSIGNED:",read.query_name)
                 return False
             elif count_exon_overlaps == 0:
+                print("UNASSIGNED:",read.query_name)
                 print("exon overlaps == 0")
                 return False
             elif count_exon_overlaps == 1:
@@ -262,17 +267,25 @@ class GeneTree(MyTree):
                 return True
 
         
-        if self.nodelist[indicies[0]].checkExons(interval):
+        if (self.nodelist[indicies[0]].checkExons(interval)):# and 
+#                self.strictOverlap(interval,indicies[0])):
             print("SUCCESS_read_added!")
 
 #            if self.nodelist[indicies[0]].getID() == "ENSMUSG00000062794.8":
 #                print("ID:[",self.nodelist[indicies[0]].getID(),"] start:",self.nodelist[indicies[0]].start, "end:", self.nodelist[indicies[0]].end)
 #                print("Reads:\t", TMP_PREV_READS[0].query_name, "\t", TMP_PREV_READS[1].query_name)
 
+
             self.nodelist[indicies[0]].reads += 1
             return True
 
+        if not self.nodelist[indicies[0]].checkExons(interval):
+            print("exon check failed!")
+#        if not self.strictOverlap(interval,indicies[0]):
+#            print("strict overlap failed!")
+        print("indicies len is:",len(indicies))
 #       print("no_exon_overlap!")
+        print("UNASSIGNED:",read.query_name)
         return False
 
     def writeTree(self, out_fp, mychrom, mystrand):

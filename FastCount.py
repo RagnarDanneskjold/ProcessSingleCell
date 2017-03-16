@@ -28,7 +28,8 @@ for read in bam_fp.fetch(until_eof = True):
 
     if not Reads.readQualityCheck(read, badreads):
         print("skipping:", read.query_name)
-        prev_read_name = ""
+        print("UNASSIGNED:",read.query_name)
+#        prev_read_name = ""
         continue
 
     if read.query_name == prev_read_name:

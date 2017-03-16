@@ -34,8 +34,8 @@ def readQualityCheck(read,badreads):
         read.is_unmapped or 
         read.mate_is_unmapped or  
         not read.is_paired or 
-        not read.is_proper_pair or
-        read.query_name in badreads
+        not read.is_proper_pair 
+#        read.query_name in badreads
         ):
 
         if read.is_secondary:
@@ -50,8 +50,8 @@ def readQualityCheck(read,badreads):
             print("read:",read.query_name,"is not paired")
         if not read.is_proper_pair:
             print("read:",read.query_name,"is not proper_pair")
-        if read.query_name in badreads:
-            print("read:",read.query_name,"is in badreads")
+#        if read.query_name in badreads:
+#            print("read:",read.query_name,"is in badreads")
 
         badreads[read.query_name] = True
         return False
