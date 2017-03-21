@@ -1,31 +1,70 @@
 import Bam
 import sys
+import os.path
 
-def getInput(args):
-    if len(args) < 3:
+def getInputThread(args,inputdict):
+    if len(args) < 4 or not os.path.isfile(args[1]) or not os.path.isfile(args[4]):
         return {}
-    
+
+    inputdict['thread'] = args[3]
+
+    bamlist = open(args[4], "r")
+
+    for line in bamlist:
+       filename = line.rstrip('\n\r') 
+       inputdict['bams'].append(filename)
+
+    bamlist.close()
+ 
+def getInput(args,THREADING):
     inputdict = {
-        'bamfile':args[1],
-        'gtffile':args[2],
-        'outfile':args[3]
-        }
+            'gtffile':'',
+            'bams':list(),
+            'outfile':''
+            }
 
-    if not Bam.checkBam(inputdict['bamfile']):
-        print("ERROR: bamfile did not check out!", file=sys.stderr)
+    if THREADING:
+        if getInputThread(args,inputdict) == {}:
+            return {}
+    elif len(args) < 3 or not os.path.isfile(args[1]) or not os.path.isfile(args[3]):
+        return {}
+    else:
+        bamlist = open(args[3], "r")
+
+        for line in bamlist:
+            filename = line.rstrip('\n\r') 
+            inputdict['bams'].append(filename)
+
+        bamlist.close()
+ 
+    inputdict['gtffile'] = args[1]
+    inputdict['outfile'] = args[2]
+
+    if len(set(inputdict['bams'])) != len(inputdict['bams']):
+        print("Duplicate bam files in input!",file=sys.stderr)
         return {}
 
-    # FIXME check if gtf exists
+    for bam in inputdict['bams']:
+        if not os.path.isfile(bam) or not Bam.checkBam(bam):
+            print("ERROR: bamfile[",bam,"] did not check out!", file=sys.stderr)
+            return {}
 
     return inputdict
 
 
-def printOutput(outfilename, gene_elements):
-    outfile = open(outfilename, 'w')
+def printOutput(outfilename, gene_elements, bam_names):
+    out_fp = open(outfilename, 'w')
 
-    #FIXME handle multiple counts for different bamfiles!
-    for chrom in gene_elements:
-        for strand in gene_elements[chrom]:
-            gene_elements[chrom][strand].writeTree(outfile, chrom, strand)
+    header = "chr\tstart\tend\tstrand\tgene_id"
 
-    outfile.close()
+    for filename in bam_names:
+        header += "\t" + filename
+
+    header += "\n"
+    out_fp.write(header)
+
+    for chrom in sorted(gene_elements):
+        for strand in sorted(gene_elements[chrom]):
+            gene_elements[chrom][strand].writeTree(out_fp)
+
+    out_fp.close()

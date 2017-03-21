@@ -1,4 +1,5 @@
 import pysam
+import Reads
 
 ## CONSTANTS ##
 LINES_TO_CHECK = 20
@@ -31,3 +32,35 @@ def checkBam(filename):
 
     return True
 
+def processBam(bamfile, bam_num, genes):
+    bam_fp = pysam.AlignmentFile(bamfile, "rb")
+    prev_reads = list()
+    prev_read_name = ""
+
+    for read in bam_fp.fetch(until_eof = True):
+#        print("Bam:",bam_num,"Read:",read.query_name)
+        if not Reads.readQualityCheck(read):
+            continue
+
+        if read.query_name == prev_read_name:
+            prev_reads.append(read)
+        else:
+            if len(prev_reads) == 2:
+                chrom = bam_fp.get_reference_name(prev_reads[0].reference_id)
+                frag = Reads.parseFragment(prev_reads,chrom)
+
+                if frag != {} and chrom in genes:
+                    genes[chrom][frag['strand']].overlapInterval(frag,bam_num)
+
+            prev_read_name = read.query_name
+            prev_reads = [read]
+
+
+    if len(prev_reads) == 2:
+        chrom = bam_fp.get_reference_name(prev_reads[0].reference_id)
+        frag = Reads.parseFragment(prev_reads,chrom)
+
+        if frag != {} and chrom in genes:
+            genes[chrom][frag['strand']].overlapInterval(frag, bam_num)
+
+    bam_fp.close()

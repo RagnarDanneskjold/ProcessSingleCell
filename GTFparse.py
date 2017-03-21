@@ -25,7 +25,8 @@ def parseValidLine(line):
 
     return result
 
-def parseGTFFile (gtf_fp):
+def parseGTFFile (gtffile, bam_num):
+    gtf_fp = open(gtffile,"r")
     parsedData = dict()
     curr_gene = 0
 
@@ -44,12 +45,15 @@ def parseGTFFile (gtf_fp):
             parsedData[fields['chrom']]['-'] = GeneTree(fields['chrom'],'-')
 
         if fields['feature'] == 'gene':
-            curr_gene = parsedData[fields['chrom']][fields['strand']].addNode(fields,fields['gene_id'])
+            curr_gene = parsedData[fields['chrom']][fields['strand']].addNode(fields,fields['gene_id'], bam_num)
         else: # exon
             parsedData[fields['chrom']][fields['strand']].addExon(fields,curr_gene)
+
+    gtf_fp.close()
 
     for chrom in parsedData:
         for strand in parsedData[chrom]:
             parsedData[chrom][strand].balanceAll()
 
     return parsedData
+
